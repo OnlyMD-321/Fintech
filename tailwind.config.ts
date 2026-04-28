@@ -5,18 +5,26 @@ const config: Config = {
   content: [
     "./app/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",
-    "./lib/**/*.{ts,tsx}"
+    "./lib/**/*.{ts,tsx}",
+    "./services/**/*.{ts,tsx}",
+    "./store/**/*.{ts,tsx}"
   ],
   theme: {
     extend: {
       colors: {
-        background: "#F9FAFB",
-        foreground: "#111827",
+        background: "#F3F6F9",
+        foreground: "#061438",
         card: "#FFFFFF",
-        primary: "#2563EB",
-        secondary: "#6366F1",
-        muted: "#E5E7EB",
-        border: "#E5E7EB"
+        primary: "#1DABFC",
+        secondary: "#061438",
+        muted: "#EBF0FE",
+        border: "#DBEFFB",
+        "mylegal-navy": "#061438",
+        "mylegal-ocean": "#1DABFC",
+        "mylegal-pale": "#DBEFFB",
+        "mylegal-cloud": "#EBF0FE",
+        "mylegal-fog": "#F3F6F9",
+        "mylegal-steel": "#718696"
       },
       borderRadius: {
         lg: "1rem",
@@ -24,8 +32,8 @@ const config: Config = {
         "2xl": "1.5rem"
       },
       boxShadow: {
-        soft: "0 10px 30px rgba(17,24,39,0.06)",
-        premium: "0 18px 40px rgba(37,99,235,0.15)"
+        soft: "0 10px 30px rgba(6,20,56,0.08)",
+        premium: "0 18px 40px rgba(29,171,252,0.18)"
       },
       keyframes: {
         floatIn: {

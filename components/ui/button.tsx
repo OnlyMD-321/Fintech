@@ -19,9 +19,9 @@ export function Button({
       className={cn(
         "inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2.5 text-[13px] font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-60",
         variant === "default" &&
-          "bg-gradient-to-r from-primary to-secondary text-white shadow-premium hover:brightness-105 active:scale-[0.99]",
-        variant === "secondary" && "bg-[#EEF2FF] text-[#3730A3] hover:bg-[#E0E7FF] active:scale-[0.99]",
-        variant === "ghost" && "bg-transparent text-foreground hover:bg-[#EEF2FF] active:scale-[0.99]",
+          "bg-gradient-to-r from-mylegal-ocean to-mylegal-navy text-white shadow-premium hover:brightness-105 active:scale-[0.99]",
+        variant === "secondary" && "bg-mylegal-pale text-mylegal-navy hover:bg-mylegal-cloud active:scale-[0.99]",
+        variant === "ghost" && "bg-transparent text-mylegal-navy hover:bg-mylegal-pale active:scale-[0.99]",
         fullWidth && "w-full",
         className
       )}
