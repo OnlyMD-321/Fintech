@@ -6,6 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { CompactSelect } from "@/components/ui/compact-select";
 import { CompactDatePicker } from "@/components/ui/compact-date-picker";
+import { useActiveProfile, useAppStore } from "@/store/app-store";
+import { CurrencyCode } from "@/services/mock-data";
 
 type Beneficiary = {
   id: string;
@@ -61,12 +63,9 @@ const beneficiaries: Beneficiary[] = [
   }
 ];
 
-const recentTransfers = [
-  { name: "Amina K.", account: "IBAN: MA64 0058 1220 0304", amount: "3 200 MAD" },
-  { name: "Said Consulting", account: "RIB: 021 780 000 124 001 009 31", amount: "14 000 MAD" }
-];
-
 export function TransferScreen() {
+  const profile = useActiveProfile();
+  const { addTransfer, setActiveTab } = useAppStore();
   const storageReadyRef = useRef(false);
   const [beneficiary, setBeneficiary] = useState("");
   const [ibanRib, setIbanRib] = useState("");
@@ -74,15 +73,21 @@ export function TransferScreen() {
   const [bank, setBank] = useState("Attijariwafa Bank");
   const [timing, setTiming] = useState<"immediate" | "scheduled">("immediate");
   const [reason, setReason] = useState("");
-  const [currency, setCurrency] = useState("MAD");
+  const [currency, setCurrency] = useState<CurrencyCode>(profile?.currency ?? "MAD");
   const [executionDate, setExecutionDate] = useState<Date | null>(new Date());
-  const [actionMessage, setActionMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuggestionOpen, setIsSuggestionOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const [isAccountSuggestionOpen, setIsAccountSuggestionOpen] = useState(false);
   const [highlightedAccountIndex, setHighlightedAccountIndex] = useState(-1);
   const suggestionRef = useRef<HTMLDivElement>(null);
   const accountSuggestionRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (profile) {
+      setCurrency(profile.currency);
+    }
+  }, [profile]);
 
   useEffect(() => {
     try {
@@ -95,7 +100,7 @@ export function TransferScreen() {
           bank?: string;
           timing?: "immediate" | "scheduled";
           reason?: string;
-          currency?: string;
+          currency?: CurrencyCode;
           executionDateIso?: string | null;
         };
 
@@ -105,7 +110,7 @@ export function TransferScreen() {
         setBank(parsed.bank ?? "Attijariwafa Bank");
         setTiming(parsed.timing ?? "immediate");
         setReason(parsed.reason ?? "");
-        setCurrency(parsed.currency ?? "MAD");
+        if (parsed.currency) setCurrency(parsed.currency);
         setExecutionDate(parsed.executionDateIso ? new Date(parsed.executionDateIso) : new Date());
       }
     } catch {
@@ -132,6 +137,18 @@ export function TransferScreen() {
       })
     );
   }, [beneficiary, ibanRib, amount, bank, timing, reason, currency, executionDate]);
+
+  const recentTransfers = useMemo(() => {
+    if (!profile) return [];
+    return profile.transactions
+      .filter((t) => t.kind === "debit")
+      .slice(0, 3)
+      .map((t) => ({
+        name: t.counterparty,
+        account: t.note || "Virement bancaire",
+        amount: `${t.amount.toLocaleString("fr-MA")} ${t.currency}`
+      }));
+  }, [profile]);
 
   const bankValues = useMemo(
     () =>
@@ -219,7 +236,7 @@ export function TransferScreen() {
     setBeneficiary(item.name);
     setIbanRib(item.accountValue);
     setBank(item.bank);
-    setCurrency(item.preferredCurrency);
+    setCurrency(item.preferredCurrency as CurrencyCode);
     setReason(item.defaultReason);
     setIsSuggestionOpen(false);
   }
@@ -329,17 +346,38 @@ export function TransferScreen() {
     }
   }
 
-  function handleConfirmTransfer() {
+  async function handleConfirmTransfer() {
     const numericAmount = Number(amount);
 
     if (!beneficiary.trim() || !ibanRib.trim() || !numericAmount || numericAmount <= 0) {
-      setActionMessage("Completez beneficiaire, IBAN/RIB et montant pour confirmer le virement.");
       return;
     }
 
-    setActionMessage(
-      `Virement ${timing === "immediate" ? "immediate" : "scheduled"} pret: ${numericAmount.toLocaleString("fr-MA")} ${currency} vers ${beneficiary}.`
-    );
+    try {
+      setIsSubmitting(true);
+      await addTransfer({
+        beneficiary,
+        ibanRib,
+        amount: numericAmount,
+        currency,
+        bank,
+        timing,
+        reason
+      });
+
+      // Clear form
+      setBeneficiary("");
+      setIbanRib("");
+      setAmount("");
+      setReason("");
+
+      // Redirect
+      setActiveTab("home");
+    } catch (error) {
+      // Error handled by store toast
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -524,7 +562,7 @@ export function TransferScreen() {
               <Label>Devise</Label>
               <CompactSelect
                 value={currency}
-                onChange={setCurrency}
+                onChange={(val) => setCurrency(val as CurrencyCode)}
                 options={[
                   { label: "MAD", value: "MAD" },
                   { label: "EUR", value: "EUR" },
@@ -542,13 +580,9 @@ export function TransferScreen() {
             </p>
           </div>
 
-          <Button fullWidth className="h-10.5" onClick={handleConfirmTransfer}>
-            Confirmer le virement
+          <Button fullWidth className="h-10.5" onClick={handleConfirmTransfer} disabled={isSubmitting}>
+            {isSubmitting ? "Traitement..." : "Confirmer le virement"}
           </Button>
-
-          {actionMessage && (
-            <p className="rounded-lg bg-[#EEF2FF] px-2.5 py-2 text-xs font-medium text-[#3730A3]">{actionMessage}</p>
-          )}
         </Card>
 
         <div className="space-y-3 md:sticky md:top-0">
@@ -577,13 +611,17 @@ export function TransferScreen() {
               Virements recents
             </h2>
             <ul className="space-y-2">
-              {recentTransfers.map((item) => (
-                <li key={item.name} className="rounded-lg bg-[#F8FAFC] p-2.5">
-                  <p className="text-sm font-medium">{item.name}</p>
-                  <p className="text-xs text-[#6B7280]">{item.account}</p>
-                  <p className="mt-1 text-xs font-semibold text-[#1D4ED8]">{item.amount}</p>
-                </li>
-              ))}
+              {recentTransfers.length > 0 ? (
+                recentTransfers.map((item, idx) => (
+                  <li key={`${item.name}-${idx}`} className="rounded-lg bg-[#F8FAFC] p-2.5">
+                    <p className="text-sm font-medium">{item.name}</p>
+                    <p className="text-xs text-[#6B7280]">{item.account}</p>
+                    <p className="mt-1 text-xs font-semibold text-[#1D4ED8]">{item.amount}</p>
+                  </li>
+                ))
+              ) : (
+                <p className="text-xs text-[#6B7280] px-1">Aucun virement récent.</p>
+              )}
             </ul>
           </Card>
         </div>
