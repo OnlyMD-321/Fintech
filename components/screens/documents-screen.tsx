@@ -9,7 +9,6 @@ import {
   Landmark, 
   FileCheck, 
   History, 
-  CheckSquare, 
   Building2,
   Download,
   Loader2
@@ -17,6 +16,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useActiveProfile, useAppStore } from "@/store/app-store";
+import { cn } from "@/lib/utils";
 
 const LOGO_URL = "https://i.ibb.co/Fk5yz9xF/logo-light.png";
 
@@ -161,52 +161,81 @@ export function DocumentsScreen() {
   if (!isMounted || !profile) return null;
 
   return (
-    <section className="space-y-4 animate-floatIn">
-      <header>
-        <h1 className="text-xl font-semibold md:text-2xl">Documents</h1>
-        <p className="text-sm text-[#6B7280]">Gérez vos documents officiels et attestations bancaires.</p>
+    // pb-20 assure que le contenu n'est pas caché par la barre de navigation sur mobile
+    <section className="animate-floatIn space-y-5 pb-20 md:pb-6">
+      
+      {/* HEADER RESPONSIVE */}
+      <header className="bg-white md:bg-transparent p-5 md:p-0 rounded-2xl md:rounded-none shadow-sm md:shadow-none border border-slate-100 md:border-none">
+        <h1 className="text-xl font-black text-slate-900 md:text-2xl">Documents officiels</h1>
+        <p className="text-sm text-slate-500 mt-1">Gérez et téléchargez vos attestations bancaires.</p>
       </header>
 
-      <div className="grid gap-3 md:grid-cols-2">
+      {/* GRILLE ADAPTATIVE (1 colonne mobile, 2 colonnes tablette/desktop) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {STANDARD_DOCUMENTS.map((doc) => {
           const Icon = doc.icon;
           return (
-            <Card key={doc.id} className="p-3 md:p-4 bg-white border-border shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 flex items-center justify-center rounded-xl bg-indigo-50 text-indigo-700">
-                    <Icon size={20} />
+            <Card key={doc.id} className="p-4 sm:p-5 bg-white border-slate-100 shadow-sm hover:shadow-md transition-all flex flex-col">
+              
+              <div className="flex items-start justify-between mb-5">
+                <div className="flex items-center gap-4">
+                  <div className="h-12 w-12 flex items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 shrink-0">
+                    <Icon size={24} />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold">{doc.name}</p>
-                    <p className="text-[11px] text-[#6B7280]">{doc.description}</p>
+                    <p className="text-sm font-bold text-slate-900">{doc.name}</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">{doc.description}</p>
                   </div>
                 </div>
-                <button onClick={() => setMenuFor(prev => prev === doc.id ? null : doc.id)} className="p-1.5 text-gray-400 hover:bg-gray-100 rounded-lg">
-                  <EllipsisVertical size={18} />
-                </button>
-              </div>
+                
+                {/* MENU DÉROULANT (Position Absolue pour ne pas casser le design) */}
+                <div className="relative">
+                  <button 
+                    onClick={() => setMenuFor(prev => prev === doc.id ? null : doc.id)} 
+                    className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-colors"
+                  >
+                    <EllipsisVertical size={18} />
+                  </button>
 
-              {menuFor === doc.id && (
-                <div className="mb-3 p-1 bg-gray-50 border border-gray-100 rounded-lg grid grid-cols-1">
-                   <button onClick={() => handleAction(doc.id, doc.name, "download")} className="flex items-center gap-2 px-3 py-2 text-xs hover:bg-white rounded-md transition-all">
-                    <Download size={14}/> Télécharger en PDF (Simulation)
-                   </button>
+                  {menuFor === doc.id && (
+                    <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-slate-100 rounded-xl shadow-lg z-50 p-1.5 animate-in fade-in zoom-in-95">
+                       <button onClick={() => handleAction(doc.id, doc.name, "download")} className="flex w-full items-center gap-2.5 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-indigo-600 rounded-lg transition-all">
+                        <Download size={14}/> Télécharger (PDF)
+                       </button>
+                    </div>
+                  )}
                 </div>
-              )}
-
-              <div className="grid grid-cols-3 gap-2">
-                <Button variant="outline" className="h-8 text-[11px] border-indigo-100 text-indigo-700 bg-indigo-50/30 hover:bg-indigo-50" onClick={() => handleAction(doc.id, doc.name, "download")} disabled={!!processingId}>
-                  {processingId === `${doc.id}-download` ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} className="mr-1.5" />}
-                  PDF
-                </Button>
-                <Button variant="ghost" className="h-8 text-[11px]" onClick={() => handleAction(doc.id, doc.name, "email")}>
-                  <Mail size={14} className="mr-1.5" /> Email
-                </Button>
-                <Button variant="ghost" className="h-8 text-[11px]" onClick={() => handleAction(doc.id, doc.name, "share")}>
-                  <Share2 size={14} className="mr-1.5" /> Partager
-                </Button>
               </div>
+
+              {/* BOUTONS D'ACTION (Grille 3 colonnes) */}
+              <div className="mt-auto">
+                <div className="grid grid-cols-3 gap-2">
+                  <Button 
+                    variant="outline" 
+                    className="h-10 text-[11px] font-bold border-indigo-100 text-indigo-700 bg-indigo-50/50 hover:bg-indigo-100 transition-colors px-0" 
+                    onClick={() => handleAction(doc.id, doc.name, "download")} 
+                    disabled={!!processingId}
+                  >
+                    {processingId === `${doc.id}-download` ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} className="mr-1.5" />}
+                    PDF
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    className="h-10 text-[11px] font-semibold bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-0" 
+                    onClick={() => handleAction(doc.id, doc.name, "email")}
+                  >
+                    <Mail size={14} className="mr-1.5" /> Email
+                  </Button>
+                  <Button 
+                    variant="ghost" 
+                    className="h-10 text-[11px] font-semibold bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-0" 
+                    onClick={() => handleAction(doc.id, doc.name, "share")}
+                  >
+                    <Share2 size={14} className="mr-1.5" /> Partager
+                  </Button>
+                </div>
+              </div>
+
             </Card>
           );
         })}

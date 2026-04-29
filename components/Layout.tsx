@@ -124,7 +124,7 @@ export function AppLayout() {
         <aside className="hidden md:flex md:w-[240px] flex-col justify-between rounded-3xl border border-white/70 bg-white/80 p-3 shadow-soft backdrop-blur-xl shrink-0 overflow-y-auto [&::-webkit-scrollbar]:hidden">
           <div>
             <div className="flex items-center justify-center rounded-2xl border border-mylegal-cloud bg-[#F3F6F9] px-2 py-4 mb-6 shadow-inner">
-              <Image src={logoLight} alt="MyLegal" width={150} height={52} className="h-auto w-[150px ]" />
+              <Image src={logoLight} alt="MyLegal" width={200} height={70} className="h-auto w-[200px ]" />
             </div>
 
             <nav className="space-y-6 flex-1 px-1">
