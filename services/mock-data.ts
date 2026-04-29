@@ -1,6 +1,6 @@
-export type TabKey = "home" | "transfers" | "invoices" | "invoices-create" | "documents" | "profile" | "insurances" | "insurances-create";
+export type TabKey = "home" | "transfers" | "invoices" | "invoices-create" | "documents" | "profile" | "cards" | "cards-create";
 
-export type CurrencyCode = "MAD" | "EUR" | "USD";
+export type CurrencyCode = "MAD";
 
 export type TransactionKind = "credit" | "debit";
 
@@ -39,27 +39,28 @@ export type BankingDocument = {
   description: string;
 };
 
-export type BankingCard = {
+// NOUVEAU : Les sous-comptes qui remplacent les cartes sur le Dashboard
+export type SubAccount = {
   id: string;
   name: string;
-  network: string;
-  maskedPan: string;
   balance: number;
   currency: CurrencyCode;
   theme: "navy-gold" | "ocean-blue" | "emerald";
 };
 
-export type InsuranceCoverage = "basic" | "premium" | "executive";
-export type InsuranceStatus = "active" | "pending" | "suspended";
+// NOUVEAU : La gestion avancée des cartes (remplace les assurances)
+export type CardStatus = "active" | "frozen" | "canceled";
 
-export type EmployeeInsurance = {
+export type BankingCard = {
   id: string;
-  employeeName: string;
-  role: string;
-  coverageType: InsuranceCoverage;
-  premium: number;
-  status: InsuranceStatus;
-  startDate: string;
+  name: string;
+  cardholder: string;
+  network: string;
+  maskedPan: string;
+  expiry: string;
+  limit: number;
+  spent: number;
+  status: CardStatus;
 };
 
 export type BankingProfile = {
@@ -78,12 +79,12 @@ export type BankingProfile = {
   currency: CurrencyCode;
   availableBalance: number;
   pendingBalance: number;
+  subAccounts: SubAccount[];
   cards: BankingCard[];
   transactions: BankingTransaction[];
   invoices: BankingInvoice[];
   documents: BankingDocument[];
   walletNotes: string[];
-  employeeInsurances: EmployeeInsurance[];
 };
 
 export type TransferPayload = {
@@ -113,122 +114,104 @@ export const mockProfiles: BankingProfile[] = [
   {
     id: "younes",
     firstName: "Younes",
-    displayName: "Younes",
+    displayName: "Omlil",
     gender: "Male",
     companyName: "MyLegal SARL",
-    companyAddress: "Tour CFC, Casablanca Finance City, Casa",
+    companyAddress: "Tour CFC, Casablanca Finance City, Casablanca",
     companyICE: "001542369000081",
     accountIBAN: "MA64 0077 8000 0123 4567 8901 0144",
-    role: "Directeur Général",
+    role: "Gérant Fondateur",
     email: "younes@mylegal.ma",
     password: "mylegal123",
     currency: "MAD",
     greeting: "Bonjour Younes",
     availableBalance: 0, 
     pendingBalance: 18000,
-    cards: [
+    subAccounts: [
       {
-        id: "younes-metal",
-        name: "Carte Premium Metal",
-        network: "Mastercard",
-        maskedPan: "•••• 2456",
-        balance: 84120.3,
+        id: "sub-y-1",
+        name: "Compte Principal",
+        balance: 145000.50,
         currency: "MAD",
         theme: "navy-gold"
       },
       {
-        id: "younes-expense",
-        name: "Frais Professionnels",
-        network: "VISA",
-        maskedPan: "•••• 0958",
-        balance: 41310.52,
+        id: "sub-y-2",
+        name: "Provision TVA & Impôts",
+        balance: 35400.00,
         currency: "MAD",
         theme: "emerald"
       }
     ],
+    cards: [
+      { id: "card-y-1", name: "Carte Corporate", cardholder: "Younes Omlil", network: "VISA", maskedPan: "•••• 2456", expiry: "12/28", limit: 50000, spent: 12450, status: "active" },
+      { id: "card-y-2", name: "Dépenses Marketing", cardholder: "Younes Omlil", network: "Mastercard", maskedPan: "•••• 8832", expiry: "06/27", limit: 20000, spent: 18500, status: "active" }
+    ],
     transactions: [
-      { id: "tx-y-1", title: "Virement Reçu", counterparty: "Atlas Consulting", amount: 24500, currency: "MAD", kind: "credit", createdAt: "2026-04-28T09:15:00.000Z", note: "Règlement Facture #014" },
-      { id: "tx-y-2", title: "Paiement Fournisseur", counterparty: "OfficePro Maroc", amount: 4500, currency: "MAD", kind: "debit", createdAt: "2026-04-25T14:30:00.000Z" },
-      { id: "tx-y-3", title: "Paiement en ligne", counterparty: "Stripe.com", amount: 1250, currency: "MAD", kind: "debit", createdAt: "2026-04-24T18:13:00.000Z" },
-      { id: "tx-y-4", title: "Salaire", counterparty: "Salaires Avril 2026", amount: 42000, currency: "MAD", kind: "debit", createdAt: "2026-04-22T10:00:00.000Z" },
-      { id: "tx-y-5", title: "Virement Reçu", counterparty: "Holding IMMO", amount: 18000, currency: "MAD", kind: "credit", createdAt: "2026-04-18T11:20:00.000Z" },
-      { id: "tx-y-6", title: "Prélèvement automatique", counterparty: "Maroc Telecom", amount: 850, currency: "MAD", kind: "debit", createdAt: "2026-04-15T08:00:00.000Z" },
-      { id: "tx-y-7", title: "Abonnement SaaS", counterparty: "Microsoft AWS", amount: 3200, currency: "MAD", kind: "debit", createdAt: "2026-04-10T16:12:00.000Z" },
-      { id: "tx-y-8", title: "Frais de déplacement", counterparty: "ONCF Autoroutes", amount: 420, currency: "MAD", kind: "debit", createdAt: "2026-04-05T09:45:00.000Z" }
+      { id: "tx-y-1", title: "Virement Reçu", counterparty: "Groupe ONA holding", amount: 45000, currency: "MAD", kind: "credit", createdAt: "2026-04-28T10:15:00.000Z", note: "Paiement facture Conseil" },
+      { id: "tx-y-2", title: "Prélèvement DGI", counterparty: "Trésorerie Générale du Royaume", amount: 12500, currency: "MAD", kind: "debit", createdAt: "2026-04-26T08:30:00.000Z", note: "IS 1er Acompte" },
+      { id: "tx-y-3", title: "Paiement Fournisseur", counterparty: "Maroc Telecom", amount: 1250, currency: "MAD", kind: "debit", createdAt: "2026-04-25T14:20:00.000Z", note: "Flotte mobile" },
+      { id: "tx-y-4", title: "Salaire Avril", counterparty: "Amine Bennani", amount: 8500, currency: "MAD", kind: "debit", createdAt: "2026-04-24T09:00:00.000Z" },
+      { id: "tx-y-5", title: "Achat Matériel", counterparty: "Electroplanet Casa", amount: 3499, currency: "MAD", kind: "debit", createdAt: "2026-04-21T16:12:00.000Z" }
     ],
     invoices: [
-      { id: "inv-y-1", reference: "INV-2026-014", clientName: "Atlas Consulting", invoiceObject: "Mission Audit Juridique", amountHT: 15000, vat: 20, totalTTC: 18000, dueDate: "2026-05-20T00:00:00.000Z", status: "paid", createdAt: "2026-04-11T10:00:00.000Z" },
-      { id: "inv-y-2", reference: "INV-2026-015", clientName: "Tech Solutions", invoiceObject: "Rédaction contrats de travail", amountHT: 8000, vat: 20, totalTTC: 9600, dueDate: "2026-05-25T00:00:00.000Z", status: "draft", createdAt: "2026-04-25T14:00:00.000Z" },
-      { id: "inv-y-3", reference: "INV-2026-016", clientName: "Bennani & Co", invoiceObject: "Consultation Fiscale", amountHT: 12000, vat: 20, totalTTC: 14400, dueDate: "2026-04-15T00:00:00.000Z", status: "draft", createdAt: "2026-03-15T09:30:00.000Z" }, // Facture en retard (Overdue)
-      { id: "inv-y-4", reference: "INV-2026-017", clientName: "Holding IMMO", invoiceObject: "Fusion & Acquisition", amountHT: 45000, vat: 20, totalTTC: 54000, dueDate: "2026-06-10T00:00:00.000Z", status: "draft", createdAt: "2026-04-28T11:00:00.000Z" }
+      { id: "inv-y-1", reference: "F-2026-041", clientName: "Attijariwafa Bank", invoiceObject: "Consultation RGPD", amountHT: 25000, vat: 20, totalTTC: 30000, dueDate: "2026-05-15T00:00:00.000Z", status: "paid", createdAt: "2026-04-10T10:00:00.000Z" },
+      { id: "inv-y-2", reference: "F-2026-042", clientName: "Label'Vie SA", invoiceObject: "Audit Contrats", amountHT: 15000, vat: 20, totalTTC: 18000, dueDate: "2026-04-20T00:00:00.000Z", status: "draft", createdAt: "2026-04-12T11:30:00.000Z" },
+      { id: "inv-y-3", reference: "F-2026-043", clientName: "ONCF", invoiceObject: "Rédaction Statuts", amountHT: 40000, vat: 20, totalTTC: 48000, dueDate: "2026-05-25T00:00:00.000Z", status: "draft", createdAt: "2026-04-25T09:15:00.000Z" }
     ],
     documents: [],
-    walletNotes: ["Liquidité MAD sécurisée", "Prévoir acompte IS (Juin)", "Contacter conseiller pro"],
-    employeeInsurances: [
-      { id: "ins-1", employeeName: "Amine Bennani", role: "Développeur Fullstack", coverageType: "premium", premium: 450, status: "active", startDate: "2025-01-15T00:00:00.000Z" },
-      { id: "ins-2", employeeName: "Fatima Zahra", role: "Responsable RH", coverageType: "basic", premium: 250, status: "active", startDate: "2025-03-01T00:00:00.000Z" },
-      { id: "ins-3", employeeName: "Karim Tazi", role: "UI/UX Designer", coverageType: "basic", premium: 250, status: "active", startDate: "2025-03-01T00:00:00.000Z" },
-      { id: "ins-4", employeeName: "Sara Idrissi", role: "Directrice Commerciale", coverageType: "executive", premium: 850, status: "active", startDate: "2024-11-01T00:00:00.000Z" },
-      { id: "ins-5", employeeName: "Youssef Alaoui", role: "Support Client", coverageType: "basic", premium: 250, status: "pending", startDate: "2026-05-01T00:00:00.000Z" },
-      { id: "ins-11", employeeName: "Nadia Chraibi", role: "Comptable", coverageType: "premium", premium: 450, status: "active", startDate: "2025-08-01T00:00:00.000Z" }
-    ]
+    walletNotes: ["Liquidité MAD sécurisée", "Préparation bilan 2025"]
   },
   {
     id: "kenza",
     firstName: "Kenza",
-    displayName: "Kenza",
-    companyName: "Tech Solutions",
-    companyAddress: "Technopark, Entrée B, Casablanca",
+    displayName: "Berrada",
+    companyName: "Tech Solutions Digital",
+    companyAddress: "Technopark, Route de Nouasseur, Casablanca",
     companyICE: "002241587000032",
     accountIBAN: "MA64 0012 5000 0987 6543 2100 0566",
     gender: "Female",
     role: "Directrice Financière",
     email: "kenza@techsolutions.ma",
     password: "tech2026",
-    currency: "USD",
+    currency: "MAD",
     greeting: "Bonjour Kenza",
     availableBalance: 0,
-    pendingBalance: 4250,
+    pendingBalance: 12500,
+    subAccounts: [
+      { id: "sub-k-1", name: "Opérations Courantes", balance: 285400.00, currency: "MAD", theme: "ocean-blue" },
+      { id: "sub-k-2", name: "Fonds de Roulement", balance: 150000.00, currency: "MAD", theme: "navy-gold" }
+    ],
     cards: [
-      { id: "kenza-digital", name: "Carte Digitale Internationale", network: "VISA", maskedPan: "•••• 4082", balance: 42310.48, currency: "USD", theme: "ocean-blue" },
-      { id: "kenza-team", name: "Dépenses Équipe", network: "Mastercard", maskedPan: "•••• 5011", balance: 26109.64, currency: "USD", theme: "emerald" }
+      { id: "card-k-1", name: "Carte Hébergement", cardholder: "Kenza Berrada", network: "Mastercard", maskedPan: "•••• 4082", expiry: "09/29", limit: 100000, spent: 45000, status: "active" },
+      { id: "card-k-2", name: "Frais de Déplacement", cardholder: "Mehdi Chraibi", network: "VISA", maskedPan: "•••• 5011", expiry: "03/28", limit: 15000, spent: 2500, status: "active" },
+      { id: "card-k-3", name: "Abonnements SaaS", cardholder: "Kenza Berrada", network: "VISA", maskedPan: "•••• 1129", expiry: "01/27", limit: 30000, spent: 29500, status: "frozen" }
     ],
     transactions: [
-      { id: "tx-k-1", title: "Paiement Client", counterparty: "Nova SaaS Inc.", amount: 9600, currency: "USD", kind: "credit", createdAt: "2026-04-28T14:05:00.000Z" },
-      { id: "tx-k-2", title: "Services Cloud", counterparty: "Amazon Web Services", amount: 2400, currency: "USD", kind: "debit", createdAt: "2026-04-26T12:55:00.000Z" },
-      { id: "tx-k-3", title: "Fonds de paie", counterparty: "Virement Salaires", amount: 12500, currency: "USD", kind: "debit", createdAt: "2026-04-25T08:40:00.000Z" },
-      { id: "tx-k-4", title: "Dépenses Marketing", counterparty: "Google Ads", amount: 3800, currency: "USD", kind: "debit", createdAt: "2026-04-20T16:20:00.000Z" },
-      { id: "tx-k-5", title: "Paiement Client", counterparty: "Global Retail LLC", amount: 15400, currency: "USD", kind: "credit", createdAt: "2026-04-15T09:10:00.000Z" },
-      { id: "tx-k-6", title: "Abonnement", counterparty: "Slack / Atlassian", amount: 450, currency: "USD", kind: "debit", createdAt: "2026-04-12T11:00:00.000Z" }
+      { id: "tx-k-1", title: "Virement Reçu", counterparty: "Groupe OCP", amount: 120000, currency: "MAD", kind: "credit", createdAt: "2026-04-28T14:05:00.000Z" },
+      { id: "tx-k-2", title: "Paiement en ligne", counterparty: "Amazon Web Services", amount: 15400, currency: "MAD", kind: "debit", createdAt: "2026-04-27T12:55:00.000Z" },
+      { id: "tx-k-3", title: "Paiement TPE", counterparty: "Boutique Apple Casablanca", amount: 18500, currency: "MAD", kind: "debit", createdAt: "2026-04-22T08:40:00.000Z" },
+      { id: "tx-k-4", title: "Frais Déplacement", counterparty: "Royal Air Maroc", amount: 4200, currency: "MAD", kind: "debit", createdAt: "2026-04-20T10:20:00.000Z" }
     ],
-    invoices: [
-      { id: "inv-k-1", reference: "FCT-2026-042", clientName: "Nova SaaS Inc.", invoiceObject: "Développement Application Mobile", amountHT: 8000, vat: 20, totalTTC: 9600, dueDate: "2026-04-25T00:00:00.000Z", status: "paid", createdAt: "2026-04-05T10:00:00.000Z" },
-      { id: "inv-k-2", reference: "FCT-2026-043", clientName: "Global Retail LLC", invoiceObject: "Maintenance Serveurs", amountHT: 2000, vat: 20, totalTTC: 2400, dueDate: "2026-05-15T00:00:00.000Z", status: "draft", createdAt: "2026-04-28T14:00:00.000Z" }
-    ],
+    invoices: [],
     documents: [],
-    walletNotes: ["Focus devises étrangères (USD)", "Phase de croissance"],
-    employeeInsurances: [
-      { id: "ins-6", employeeName: "Mehdi Chraibi", role: "Lead Developer", coverageType: "executive", premium: 850, status: "active", startDate: "2024-06-15T00:00:00.000Z" },
-      { id: "ins-7", employeeName: "Sofia Berrada", role: "Ingénieur QA", coverageType: "premium", premium: 450, status: "active", startDate: "2025-02-10T00:00:00.000Z" },
-      { id: "ins-8", employeeName: "Ayman Lahlou", role: "Ingénieur DevOps", coverageType: "premium", premium: 450, status: "active", startDate: "2025-02-10T00:00:00.000Z" },
-      { id: "ins-9", employeeName: "Rania Naciri", role: "Responsable Marketing", coverageType: "basic", premium: 250, status: "pending", startDate: "2026-05-01T00:00:00.000Z" },
-      { id: "ins-10", employeeName: "Oussama El Fassi", role: "Commercial", coverageType: "basic", premium: 250, status: "suspended", startDate: "2024-01-01T00:00:00.000Z" }
-    ]
+    walletNotes: ["Croissance Q2", "Renouvellement parc IT"]
   }
 ];
 
 export function createInitialProfiles() {
   return mockProfiles.map((profile) => {
-    const computedGlobalBalance = profile.cards.reduce((sum, card) => sum + card.balance, 0);
+    // Le solde global est la somme des sous-comptes
+    const computedGlobalBalance = profile.subAccounts.reduce((sum, acc) => sum + acc.balance, 0);
     return {
       ...profile,
       availableBalance: computedGlobalBalance,
+      subAccounts: profile.subAccounts.map((acc) => ({ ...acc })),
       cards: profile.cards.map((card) => ({ ...card })),
       transactions: profile.transactions.map((transaction) => ({ ...transaction })),
       invoices: profile.invoices.map((invoice) => ({ ...invoice })),
       documents: profile.documents.map((document) => ({ ...document })),
-      walletNotes: [...profile.walletNotes],
-      employeeInsurances: profile.employeeInsurances.map((ins) => ({ ...ins }))
+      walletNotes: [...profile.walletNotes]
     };
   });
 }

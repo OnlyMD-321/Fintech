@@ -11,8 +11,8 @@ import {
   UserRound,
   LogOut,
   Loader2,
-  ShieldCheck,
-  PlusCircle
+  PlusCircle,
+  CreditCard
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LoginScreen } from "@/components/screens/login-screen";
@@ -21,7 +21,7 @@ import { TransferScreen } from "@/components/screens/transfer-screen";
 import { InvoiceScreen } from "@/components/screens/invoice-screen";
 import { DocumentsScreen } from "@/components/screens/documents-screen";
 import { ProfileScreen } from "@/components/screens/profile-screen";
-import { InsuranceScreen } from "@/components/screens/insurance-screen";
+import { CardsScreen } from "@/components/screens/cards-screen";
 import { ToastStack } from "@/components/ui/toast-stack";
 import { useAppStore } from "@/store/app-store";
 import logoLight from "@/app/assets/logos/logo-light.png";
@@ -45,8 +45,8 @@ const navigationGroups = [
   {
     title: "Gestion entreprise",
     links: [
-      { key: "insurances", label: "Assurance Santé", icon: ShieldCheck },
-      { key: "insurances-create", label: "Nouvelle affiliation", icon: PlusCircle, isSub: true },
+      { key: "cards", label: "Cartes bancaires", icon: CreditCard },
+      { key: "cards-create", label: "Nouvelle carte", icon: PlusCircle, isSub: true },
       { key: "documents", label: "Documents officiels", icon: FolderClosed },
     ]
   },
@@ -63,7 +63,7 @@ const mobileTabs = [
   { key: "home", label: "Accueil", icon: Home },
   { key: "transfers", label: "Virements", icon: ArrowLeftRight },
   { key: "invoices", label: "Factures", icon: FileText },
-  { key: "insurances", label: "Mutuelle", icon: ShieldCheck }, 
+  { key: "cards", label: "Cartes", icon: CreditCard }, 
   { key: "profile", label: "Profil", icon: UserRound }
 ] as const;
 
@@ -79,19 +79,13 @@ export function AppLayout() {
   const setActiveTab = useAppStore((state) => state.setActiveTab);
   const logout = useAppStore((state) => state.logout);
 
-  // Le Routeur Interne : on passe la "vue" souhaitée en paramètre (prop)
   const content = useMemo(() => {
     if (activeTab === "home") return <DashboardScreen />;
     if (activeTab === "transfers") return <TransferScreen />;
-    
-    // Factures (Gère la liste ET la création)
     if (activeTab === "invoices" || activeTab === "invoices-create") 
       return <InvoiceScreen view={activeTab === "invoices-create" ? "create" : "list"} />;
-      
-    // Assurances (Gère la liste ET l'affiliation)
-    if (activeTab === "insurances" || activeTab === "insurances-create") 
-      return <InsuranceScreen view={activeTab === "insurances-create" ? "create" : "list"} />;
-      
+    if (activeTab === "cards" || activeTab === "cards-create") 
+      return <CardsScreen view={activeTab === "cards-create" ? "create" : "list"} />;
     if (activeTab === "documents") return <DocumentsScreen />;
     if (activeTab === "profile") return <ProfileScreen />;
     return <DashboardScreen />;
@@ -120,11 +114,11 @@ export function AppLayout() {
 
       <div className="mx-auto flex w-full max-w-[1480px] flex-1 items-stretch gap-3 md:min-h-0 lg:gap-5">
         
-        {/* ASIDE DESKTOP (Menu avec sous-liens) */}
-        <aside className="hidden md:flex md:w-[240px] flex-col justify-between rounded-3xl border border-white/70 bg-white/80 p-3 shadow-soft backdrop-blur-xl shrink-0 overflow-y-auto [&::-webkit-scrollbar]:hidden">
+        {/* CORRECTION ICI : Ajout de "relative z-[100]" pour passer au-dessus des modales */}
+        <aside className="hidden md:flex relative z-[100] md:w-[240px] flex-col justify-between rounded-3xl border border-white/70 bg-white/80 p-3 shadow-soft backdrop-blur-xl shrink-0 overflow-y-auto [&::-webkit-scrollbar]:hidden">
           <div>
             <div className="flex items-center justify-center rounded-2xl border border-mylegal-cloud bg-[#F3F6F9] px-2 py-4 mb-6 shadow-inner">
-              <Image src={logoLight} alt="MyLegal" width={200} height={70} className="h-auto w-[200px ]" />
+              <Image src={logoLight} alt="MyLegal" width={200} height={70} className="h-auto w-[200px]" />
             </div>
 
             <nav className="space-y-6 flex-1 px-1">
@@ -173,7 +167,7 @@ export function AppLayout() {
           </div>
         </aside>
 
-        <section className="flex min-w-0 flex-1 flex-col md:min-h-0">
+        <section className="flex min-w-0 flex-1 flex-col md:min-h-0 relative z-0">
           <div className="flex flex-1 flex-col rounded-[1.75rem] border border-white/70 bg-white/80 p-2.5 shadow-soft backdrop-blur-xl md:min-h-0 md:rounded-3xl md:p-4 lg:p-5">
             <AnimatePresence mode="wait">
               <motion.div
@@ -191,12 +185,10 @@ export function AppLayout() {
         </section>
       </div>
 
-      {/* NAVIGATION MOBILE */}
-      <nav className="fixed bottom-4 left-1/2 z-30 w-[calc(100%-1.5rem)] max-w-[390px] -translate-x-1/2 rounded-2xl border border-white/70 bg-white/90 px-1.5 py-1.5 shadow-soft backdrop-blur-2xl md:hidden">
+      <nav className="fixed bottom-4 left-1/2 z-[100] w-[calc(100%-1.5rem)] max-w-[390px] -translate-x-1/2 rounded-2xl border border-white/70 bg-white/90 px-1.5 py-1.5 shadow-soft backdrop-blur-2xl md:hidden">
         <ul className="grid grid-cols-5 gap-1">
           {mobileTabs.map((tab) => {
             const Icon = tab.icon;
-            // Magie: si on est sur "invoices-create", l'onglet "invoices" reste actif en bas !
             const isActive = activeTab.startsWith(tab.key);
             return (
               <li key={tab.key}>

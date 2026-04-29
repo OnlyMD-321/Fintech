@@ -2,12 +2,12 @@
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { BadgeDollarSign, Building2, LogOut, ShieldCheck, UserRound, MapPin, Fingerprint } from "lucide-react";
+import { BadgeDollarSign, Building2, LogOut, ShieldCheck, UserRound, MapPin, Fingerprint, FileText } from "lucide-react";
 import { useActiveProfile, useAppStore } from "@/store/app-store";
 
 export function ProfileScreen() {
   const profile = useActiveProfile();
-  const logout = useAppStore((state) => state.logout);
+  const { logout, setActiveTab } = useAppStore();
 
   if (!profile) return null;
 
@@ -91,6 +91,17 @@ export function ProfileScreen() {
               <Button variant="outline" className="w-full justify-start h-11 text-sm font-bold border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900">
                 Préférences d'affichage
               </Button>
+              
+              {/* NOUVEAU BOUTON : MES DOCUMENTS */}
+              <Button 
+                variant="outline" 
+                className="w-full justify-start h-11 text-sm font-bold border-slate-200 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700"
+                onClick={() => setActiveTab("documents")}
+              >
+                <FileText size={16} className="mr-2" />
+                Mes documents
+              </Button>
+
               <div className="pt-2 border-t border-slate-100 mt-2">
                 <Button variant="ghost" className="w-full justify-start h-11 text-sm font-bold text-red-600 hover:bg-red-50 hover:text-red-700" onClick={logout}>
                   <LogOut size={16} className="mr-2" />
