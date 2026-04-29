@@ -12,7 +12,7 @@
     * Création de factures avec calcul automatique de TVA.
     * Génération de fichiers HTML/PDF dynamiques avec données réelles.
 * **Assurances Santé (Mutuelle)** : Dashboard RH complet permettant d'affilier des employés et de gérer les suspensions/activations de couverture.
-* **Centre de Documents** : Génération instantanée de RIB, Attestations de titularité et Relevés avec logo officiel et mentions légales conformes (Tour CFC).
+* **Centre de Documents** : Génération instantanée de RIB, Attestations de titularité et Relevés avec logo officiel et mentions légales conformes.
 
 ---
 
