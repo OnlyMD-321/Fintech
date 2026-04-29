@@ -49,7 +49,6 @@ export type BankingCard = {
   theme: "navy-gold" | "ocean-blue" | "emerald";
 };
 
-// NOUVEAUX TYPES POUR L'ASSURANCE
 export type InsuranceCoverage = "basic" | "premium" | "executive";
 export type InsuranceStatus = "active" | "pending" | "suspended";
 
@@ -70,6 +69,9 @@ export type BankingProfile = {
   greeting: string;
   gender: string | "Male" | "Female";
   companyName: string;
+  companyAddress: string; // AJOUTÉ POUR LES DOCS
+  companyICE: string;    // AJOUTÉ POUR LES DOCS
+  accountIBAN: string;   // AJOUTÉ POUR LES DOCS
   role: string;
   email: string;
   password: string;
@@ -81,7 +83,7 @@ export type BankingProfile = {
   invoices: BankingInvoice[];
   documents: BankingDocument[];
   walletNotes: string[];
-  employeeInsurances: EmployeeInsurance[]; // AJOUT ICI
+  employeeInsurances: EmployeeInsurance[];
 };
 
 export type TransferPayload = {
@@ -114,12 +116,15 @@ export const mockProfiles: BankingProfile[] = [
     displayName: "Younes",
     gender: "Male",
     companyName: "MyLegal SARL",
+    companyAddress: "Tour CFC, Casablanca Finance City, Casa",
+    companyICE: "001542369000081",
+    accountIBAN: "MA64 0077 8000 0123 4567 8901 0144",
     role: "Managing Director",
     email: "younes@mylegal.ma",
     password: "mylegal123",
     currency: "MAD",
     greeting: "Welcome back Younes",
-    availableBalance: 125430.82,
+    availableBalance: 0, 
     pendingBalance: 18000,
     cards: [
       {
@@ -142,86 +147,22 @@ export const mockProfiles: BankingProfile[] = [
       }
     ],
     transactions: [
-      {
-        id: "tx-y-1",
-        title: "Transfer received",
-        counterparty: "Client Atlas",
-        amount: 12000,
-        currency: "MAD",
-        kind: "credit",
-        createdAt: "2026-04-24T17:27:00.000Z",
-        note: "Incoming settlement"
-      },
-      {
-        id: "tx-y-2",
-        title: "Supplier payment",
-        counterparty: "OfficePro Maroc",
-        amount: 4500,
-        currency: "MAD",
-        kind: "debit",
-        createdAt: "2026-04-23T18:13:00.000Z"
-      },
-      {
-        id: "tx-y-3",
-        title: "Salary",
-        counterparty: "March 2026",
-        amount: 8000,
-        currency: "MAD",
-        kind: "debit",
-        createdAt: "2026-04-22T21:42:00.000Z"
-      },
-      {
-        id: "tx-y-4",
-        title: "Bank card",
-        counterparty: "SaaS subscription",
-        amount: 320,
-        currency: "MAD",
-        kind: "debit",
-        createdAt: "2026-04-21T16:12:00.000Z"
-      }
+      { id: "tx-y-1", title: "Virement Reçu", counterparty: "Client Atlas", amount: 12000, currency: "MAD", kind: "credit", createdAt: "2026-04-24T17:27:00.000Z", note: "Incoming settlement" },
+      { id: "tx-y-2", title: "Paiement Fournisseur", counterparty: "OfficePro Maroc", amount: 4500, currency: "MAD", kind: "debit", createdAt: "2026-04-23T18:13:00.000Z" },
+      { id: "tx-y-3", title: "Salaire", counterparty: "Mars 2026", amount: 8000, currency: "MAD", kind: "debit", createdAt: "2026-04-22T21:42:00.000Z" },
+      { id: "tx-y-4", title: "Abonnement SaaS", counterparty: "Stripe", amount: 320, currency: "MAD", kind: "debit", createdAt: "2026-04-21T16:12:00.000Z" }
     ],
     invoices: [
-      {
-        id: "inv-y-1",
-        reference: "INV-2026-014",
-        clientName: "Atlas Legal",
-        invoiceObject: "Compliance advisory",
-        amountHT: 15000,
-        vat: 20,
-        totalTTC: 18000,
-        dueDate: "2026-05-20T00:00:00.000Z",
-        status: "paid",
-        createdAt: "2026-04-11T10:00:00.000Z"
-      }
+      { id: "inv-y-1", reference: "INV-2026-014", clientName: "Atlas Legal", invoiceObject: "Conseil Juridique", amountHT: 15000, vat: 20, totalTTC: 18000, dueDate: "2026-05-20T00:00:00.000Z", status: "paid", createdAt: "2026-04-11T10:00:00.000Z" }
     ],
-    documents: [
-      {
-        id: "doc-y-rib",
-        name: "RIB",
-        fileName: "mylegal-rib.pdf",
-        description: "Secure company bank details"
-      },
-      {
-        id: "doc-y-statements",
-        name: "Bank statements",
-        fileName: "mylegal-statements.pdf",
-        description: "Monthly account history"
-      },
-      {
-        id: "doc-y-kyc",
-        name: "KYC",
-        fileName: "mylegal-kyc.pdf",
-        description: "Company verification pack"
-      }
-    ],
-    walletNotes: ["High MAD liquidity", "EUR reserve wallet", "Priority support"],
-    // AJOUT DES EMPLOYÉS ASSURÉS POUR YOUNES
+    documents: [],
+    walletNotes: ["Liquidité MAD élevée", "Réserve EUR", "Support Prioritaire"],
     employeeInsurances: [
       { id: "ins-1", employeeName: "Amine Bennani", role: "Développeur", coverageType: "premium", premium: 450, status: "active", startDate: "2025-01-15T00:00:00.000Z" },
-      { id: "ins-2", employeeName: "Fatima Zahra", role: "Ressources Humaines", coverageType: "basic", premium: 250, status: "active", startDate: "2025-03-01T00:00:00.000Z" },
-      { id: "ins-3", employeeName: "Karim Tazi", role: "Product Designer", coverageType: "basic", premium: 250, status: "active", startDate: "2025-03-01T00:00:00.000Z" },
-      { id: "ins-4", employeeName: "Sara Idrissi", role: "Directrice Commerciale", coverageType: "executive", premium: 850, status: "active", startDate: "2024-11-01T00:00:00.000Z" },
-      { id: "ins-5", employeeName: "Youssef Alaoui", role: "Support Client", coverageType: "basic", premium: 250, status: "pending", startDate: "2026-05-01T00:00:00.000Z" }
+      { id: "ins-2", employeeName: "Fatima Zahra", role: "RH", coverageType: "basic", premium: 250, status: "active", startDate: "2025-03-01T00:00:00.000Z" },
+      { id: "ins-3", employeeName: "Karim Tazi", role: "Designer", coverageType: "basic", premium: 250, status: "active", startDate: "2025-03-01T00:00:00.000Z" },
+      { id: "ins-4", employeeName: "Sara Idrissi", role: "Sales Director", coverageType: "executive", premium: 850, status: "active", startDate: "2024-11-01T00:00:00.000Z" },
+      { id: "ins-5", employeeName: "Youssef Alaoui", role: "Support", coverageType: "basic", premium: 250, status: "pending", startDate: "2026-05-01T00:00:00.000Z" }
     ]
   },
   {
@@ -229,86 +170,29 @@ export const mockProfiles: BankingProfile[] = [
     firstName: "Kenza",
     displayName: "Kenza",
     companyName: "Tech Solutions",
+    companyAddress: "Technopark, Entrée B, Casablanca",
+    companyICE: "002241587000032",
+    accountIBAN: "MA64 0012 5000 0987 6543 2100 0566",
     gender: "Female",
     role: "Finance Lead",
     email: "kenza@techsolutions.ma",
     password: "tech2026",
     currency: "USD",
     greeting: "Welcome back Kenza",
-    availableBalance: 68420.12,
+    availableBalance: 0,
     pendingBalance: 4250,
     cards: [
-      {
-        id: "kenza-digital",
-        name: "Digital Blue Card",
-        network: "VISA",
-        maskedPan: "•••• 4082",
-        balance: 42310.48,
-        currency: "USD",
-        theme: "ocean-blue"
-      },
-      {
-        id: "kenza-team",
-        name: "Team Expense Card",
-        network: "Mastercard",
-        maskedPan: "•••• 5011",
-        balance: 26109.64,
-        currency: "USD",
-        theme: "emerald"
-      }
+      { id: "kenza-digital", name: "Digital Blue Card", network: "VISA", maskedPan: "•••• 4082", balance: 42310.48, currency: "USD", theme: "ocean-blue" },
+      { id: "kenza-team", name: "Team Expense Card", network: "Mastercard", maskedPan: "•••• 5011", balance: 26109.64, currency: "USD", theme: "emerald" }
     ],
     transactions: [
-      {
-        id: "tx-k-1",
-        title: "Client payment",
-        counterparty: "Nova SaaS",
-        amount: 9600,
-        currency: "USD",
-        kind: "credit",
-        createdAt: "2026-04-24T14:05:00.000Z"
-      },
-      {
-        id: "tx-k-2",
-        title: "Cloud services",
-        counterparty: "AWS",
-        amount: 2400,
-        currency: "USD",
-        kind: "debit",
-        createdAt: "2026-04-23T12:55:00.000Z"
-      },
-      {
-        id: "tx-k-3",
-        title: "Payroll reserve",
-        counterparty: "April 2026",
-        amount: 7000,
-        currency: "USD",
-        kind: "debit",
-        createdAt: "2026-04-22T08:40:00.000Z"
-      }
+      { id: "tx-k-1", title: "Client payment", counterparty: "Nova SaaS", amount: 9600, currency: "USD", kind: "credit", createdAt: "2026-04-24T14:05:00.000Z" },
+      { id: "tx-k-2", title: "Cloud services", counterparty: "AWS", amount: 2400, currency: "USD", kind: "debit", createdAt: "2026-04-23T12:55:00.000Z" },
+      { id: "tx-k-3", title: "Payroll reserve", counterparty: "April 2026", amount: 7000, currency: "USD", kind: "debit", createdAt: "2026-04-22T08:40:00.000Z" }
     ],
     invoices: [],
-    documents: [
-      {
-        id: "doc-k-rib",
-        name: "RIB",
-        fileName: "techsolutions-rib.pdf",
-        description: "Bank coordinates for USD flows"
-      },
-      {
-        id: "doc-k-statements",
-        name: "Bank statements",
-        fileName: "techsolutions-statements.pdf",
-        description: "Monthly operating statements"
-      },
-      {
-        id: "doc-k-kyc",
-        name: "KYC",
-        fileName: "techsolutions-kyc.pdf",
-        description: "Updated compliance package"
-      }
-    ],
-    walletNotes: ["USD focus", "Flexible contractor payouts", "Growth stage operations"],
-    // AJOUT DES EMPLOYÉS ASSURÉS POUR KENZA
+    documents: [],
+    walletNotes: ["USD focus", "Growth stage"],
     employeeInsurances: [
       { id: "ins-6", employeeName: "Mehdi Chraibi", role: "Lead Dev", coverageType: "executive", premium: 850, status: "active", startDate: "2024-06-15T00:00:00.000Z" },
       { id: "ins-7", employeeName: "Sofia Berrada", role: "QA Engineer", coverageType: "premium", premium: 450, status: "active", startDate: "2025-02-10T00:00:00.000Z" },
@@ -322,7 +206,6 @@ export const mockProfiles: BankingProfile[] = [
 export function createInitialProfiles() {
   return mockProfiles.map((profile) => {
     const computedGlobalBalance = profile.cards.reduce((sum, card) => sum + card.balance, 0);
-
     return {
       ...profile,
       availableBalance: computedGlobalBalance,
@@ -331,7 +214,7 @@ export function createInitialProfiles() {
       invoices: profile.invoices.map((invoice) => ({ ...invoice })),
       documents: profile.documents.map((document) => ({ ...document })),
       walletNotes: [...profile.walletNotes],
-      employeeInsurances: profile.employeeInsurances.map((ins) => ({ ...ins })) // AJOUT ICI
+      employeeInsurances: profile.employeeInsurances.map((ins) => ({ ...ins }))
     };
   });
 }
