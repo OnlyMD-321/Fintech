@@ -1,8 +1,8 @@
-# 🏦 MyLegal Fintech Platform
+# MyLegal Fintech Platform
 
 **MyLegal Fintech** est une plateforme bancaire B2B moderne conçue pour les entreprises opérant au Maroc (CFC). Elle permet la gestion multi-cartes, les virements instantanés, la facturation automatisée et la gestion de la mutuelle santé des collaborateurs, le tout avec une génération de documents officiels en temps réel.
 
-## 🚀 Fonctionnalités Clés
+## Fonctionnalités Clés
 
 * **Tableau de Bord Dynamique** : Visualisation du solde global synchronisé avec les soldes des cartes en temps réel.
 * **Gestion de Cartes** : Création de cartes virtuelles (Visa/Mastercard/Amex) avec allocation de fonds depuis le solde principal.
@@ -16,10 +16,9 @@
 
 ---
 
-## 📂 Architecture du Projet
+## Architecture du Projet
 
 ```text
-C:.
 │   .gitignore
 │   next-env.d.ts
 │   next.config.mjs
@@ -54,7 +53,7 @@ C:.
 └── store/
     └── app-store.ts        # État global Zustand avec persistance LocalStorage
 ```
-## 🛠️ Stack Technique
+## Stack Technique
 
 * **Framework** : [Next.js 14](https://nextjs.org/) (App Router)
 * **Langage** : [TypeScript](https://www.typescriptlang.org/)
@@ -63,7 +62,7 @@ C:.
 * **Gestion d'état** : [Zustand](https://docs.pmnd.rs/zustand/) (Store persistant)
 * **Icônes** : [Lucide React](https://lucide.dev/)
 
-## ⚙️ Installation et Développement
+## Installation et Développement
 
 1.  **Installation des dépendances** : Utilisez votre gestionnaire de paquets pour installer les modules nécessaires.
 
@@ -79,7 +78,7 @@ C:.
 
 3.  **Accès** : Ouvrez http://localhost:3000 dans votre navigateur.
 
-## 🏗️ Logique Métier & Déploiement PRO
+## Logique Métier & Déploiement PRO
 
 ### 1. Source de Vérité Bancaire
 Le système utilise une logique de calcul ascendante. Le `availableBalance` n'est pas une valeur stockée statiquement, mais une somme calculée dynamiquement à partir de tous les soldes des cartes individuelles. Toute transaction débitrice sur une carte met à jour instantanément le solde global pour garantir l'intégrité des données.
@@ -94,7 +93,7 @@ L'application est optimisée pour un déploiement sur **Vercel** ou tout serveur
     npm run build
 ```
 
-## 📝 Mentions Légales (Officielles)
+## Mentions Légales (Officielles)
 
 Les documents générés par la plateforme (RIB, Attestations, Factures) intègrent automatiquement les coordonnées officielles de la structure :
 
