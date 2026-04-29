@@ -1,4 +1,4 @@
-export type TabKey = "home" | "transfers" | "invoices" | "documents" | "profile";
+export type TabKey = "home" | "transfers" | "invoices" | "invoices-create" | "documents" | "profile" | "insurances" | "insurances-create";
 
 export type CurrencyCode = "MAD" | "EUR" | "USD";
 
@@ -49,17 +49,31 @@ export type BankingCard = {
   theme: "navy-gold" | "ocean-blue" | "emerald";
 };
 
+// NOUVEAUX TYPES POUR L'ASSURANCE
+export type InsuranceCoverage = "basic" | "premium" | "executive";
+export type InsuranceStatus = "active" | "pending" | "suspended";
+
+export type EmployeeInsurance = {
+  id: string;
+  employeeName: string;
+  role: string;
+  coverageType: InsuranceCoverage;
+  premium: number;
+  status: InsuranceStatus;
+  startDate: string;
+};
+
 export type BankingProfile = {
   id: string;
   firstName: string;
   displayName: string;
+  greeting: string;
   gender: string | "Male" | "Female";
   companyName: string;
   role: string;
   email: string;
   password: string;
   currency: CurrencyCode;
-  greeting: string;
   availableBalance: number;
   pendingBalance: number;
   cards: BankingCard[];
@@ -67,6 +81,7 @@ export type BankingProfile = {
   invoices: BankingInvoice[];
   documents: BankingDocument[];
   walletNotes: string[];
+  employeeInsurances: EmployeeInsurance[]; // AJOUT ICI
 };
 
 export type TransferPayload = {
@@ -199,7 +214,15 @@ export const mockProfiles: BankingProfile[] = [
         description: "Company verification pack"
       }
     ],
-    walletNotes: ["High MAD liquidity", "EUR reserve wallet", "Priority support"]
+    walletNotes: ["High MAD liquidity", "EUR reserve wallet", "Priority support"],
+    // AJOUT DES EMPLOYÉS ASSURÉS POUR YOUNES
+    employeeInsurances: [
+      { id: "ins-1", employeeName: "Amine Bennani", role: "Développeur", coverageType: "premium", premium: 450, status: "active", startDate: "2025-01-15T00:00:00.000Z" },
+      { id: "ins-2", employeeName: "Fatima Zahra", role: "Ressources Humaines", coverageType: "basic", premium: 250, status: "active", startDate: "2025-03-01T00:00:00.000Z" },
+      { id: "ins-3", employeeName: "Karim Tazi", role: "Product Designer", coverageType: "basic", premium: 250, status: "active", startDate: "2025-03-01T00:00:00.000Z" },
+      { id: "ins-4", employeeName: "Sara Idrissi", role: "Directrice Commerciale", coverageType: "executive", premium: 850, status: "active", startDate: "2024-11-01T00:00:00.000Z" },
+      { id: "ins-5", employeeName: "Youssef Alaoui", role: "Support Client", coverageType: "basic", premium: 250, status: "pending", startDate: "2026-05-01T00:00:00.000Z" }
+    ]
   },
   {
     id: "kenza",
@@ -284,19 +307,33 @@ export const mockProfiles: BankingProfile[] = [
         description: "Updated compliance package"
       }
     ],
-    walletNotes: ["USD focus", "Flexible contractor payouts", "Growth stage operations"]
+    walletNotes: ["USD focus", "Flexible contractor payouts", "Growth stage operations"],
+    // AJOUT DES EMPLOYÉS ASSURÉS POUR KENZA
+    employeeInsurances: [
+      { id: "ins-6", employeeName: "Mehdi Chraibi", role: "Lead Dev", coverageType: "executive", premium: 850, status: "active", startDate: "2024-06-15T00:00:00.000Z" },
+      { id: "ins-7", employeeName: "Sofia Berrada", role: "QA Engineer", coverageType: "premium", premium: 450, status: "active", startDate: "2025-02-10T00:00:00.000Z" },
+      { id: "ins-8", employeeName: "Ayman Lahlou", role: "DevOps", coverageType: "premium", premium: 450, status: "active", startDate: "2025-02-10T00:00:00.000Z" },
+      { id: "ins-9", employeeName: "Rania Naciri", role: "Marketing", coverageType: "basic", premium: 250, status: "pending", startDate: "2026-05-01T00:00:00.000Z" },
+      { id: "ins-10", employeeName: "Oussama El Fassi", role: "Sales", coverageType: "basic", premium: 250, status: "suspended", startDate: "2024-01-01T00:00:00.000Z" }
+    ]
   }
 ];
 
 export function createInitialProfiles() {
-  return mockProfiles.map((profile) => ({
-    ...profile,
-    cards: profile.cards.map((card) => ({ ...card })),
-    transactions: profile.transactions.map((transaction) => ({ ...transaction })),
-    invoices: profile.invoices.map((invoice) => ({ ...invoice })),
-    documents: profile.documents.map((document) => ({ ...document })),
-    walletNotes: [...profile.walletNotes]
-  }));
+  return mockProfiles.map((profile) => {
+    const computedGlobalBalance = profile.cards.reduce((sum, card) => sum + card.balance, 0);
+
+    return {
+      ...profile,
+      availableBalance: computedGlobalBalance,
+      cards: profile.cards.map((card) => ({ ...card })),
+      transactions: profile.transactions.map((transaction) => ({ ...transaction })),
+      invoices: profile.invoices.map((invoice) => ({ ...invoice })),
+      documents: profile.documents.map((document) => ({ ...document })),
+      walletNotes: [...profile.walletNotes],
+      employeeInsurances: profile.employeeInsurances.map((ins) => ({ ...ins })) // AJOUT ICI
+    };
+  });
 }
 
 export function findProfileByEmail(email: string) {

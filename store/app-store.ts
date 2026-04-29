@@ -8,10 +8,12 @@ import {
   type BankingInvoice,
   type BankingProfile,
   type BankingTransaction,
+  type BankingCard,
   type InvoicePayload,
   type LoginPayload,
   type TabKey,
-  type TransferPayload
+  type TransferPayload,
+  type EmployeeInsurance // <-- NOUVEL IMPORT
 } from "@/services/mock-data";
 import { createInvoice, createTransfer, handleDocumentAction, loginWithCredentials, loginWithProfile, markInvoicePaid } from "@/services/mock-api";
 
@@ -43,8 +45,14 @@ type AppState = {
   runDocumentAction: (documentId: string, action: BankingDocumentAction) => Promise<void>;
   getActiveProfile: () => BankingProfile | null;
   getProfileById: (profileId: string) => BankingProfile | undefined;
+  addCard: (newCard: BankingCard) => void;
+  
+  // NOUVELLES ACTIONS ASSURANCE
+  toggleInsuranceStatus: (insuranceId: string) => void;
+  addInsurance: (payload: Omit<EmployeeInsurance, "id">) => Promise<void>;
 };
 
+// Initialisation via mock-data.ts
 const initialProfiles = createInitialProfiles();
 
 function formatAmount(amount: number) {
@@ -58,7 +66,7 @@ function updateProfile(state: AppState, profileId: string, updater: (profile: Ba
 function buildTransferTransaction(payload: TransferPayload): BankingTransaction {
   return {
     id: crypto.randomUUID(),
-    title: "Transfer sent",
+    title: "Virement émis",
     counterparty: payload.beneficiary,
     amount: formatAmount(payload.amount),
     currency: payload.currency,
@@ -77,7 +85,9 @@ export const useAppStore = create<AppState>()(
       profiles: initialProfiles,
       toasts: [],
       loginError: null,
+      
       setActiveTab: (tab) => set({ activeTab: tab }),
+      
       showToast: (toast) => {
         const id = crypto.randomUUID();
         set((state) => ({ toasts: [...state.toasts, { id, ...toast }] }));
@@ -85,73 +95,97 @@ export const useAppStore = create<AppState>()(
           set((state) => ({ toasts: state.toasts.filter((item) => item.id !== id) }));
         }, 3200);
       },
+      
       removeToast: (id) => set((state) => ({ toasts: state.toasts.filter((toast) => toast.id !== id) })),
+      
       login: async (payload) => {
         try {
           const response = await loginWithCredentials(payload);
           set({ isAuthenticated: true, activeProfileId: response.profileId, activeTab: "home", loginError: null });
           get().showToast({
-            title: "Login successful",
-            description: "Your demo workspace is ready.",
+            title: "Connexion réussie",
+            description: "Votre espace est prêt.",
             variant: "success"
           });
         } catch (error) {
-          const message = error instanceof Error ? error.message : "Unable to sign in.";
+          const message = error instanceof Error ? error.message : "Identifiants invalides.";
           set({ loginError: message });
           get().showToast({
-            title: "Login failed",
+            title: "Échec de connexion",
             description: message,
             variant: "destructive"
           });
           throw error;
         }
       },
+      
       fastLogin: async (profileId) => {
         await loginWithProfile(profileId);
         set({ isAuthenticated: true, activeProfileId: profileId, activeTab: "home", loginError: null });
         get().showToast({
-          title: "Dev fast-login ready",
-          description: `Profile ${profileId} loaded successfully.`,
+          title: "Connexion rapide réussie",
+          description: `Profil chargé avec succès.`,
           variant: "success"
         });
       },
+      
       logout: () => {
         set({ isAuthenticated: false, activeProfileId: null, activeTab: "home" });
         get().showToast({
-          title: "Signed out",
-          description: "You have returned to the login screen.",
+          title: "Déconnexion",
+          description: "Vous avez été déconnecté en toute sécurité.",
           variant: "default"
         });
       },
+      
       addTransfer: async (payload) => {
         const response = await createTransfer(payload);
         const activeProfileId = get().activeProfileId;
 
         if (!activeProfileId) {
-          throw new Error("No active profile selected.");
+          throw new Error("Aucun profil actif.");
         }
 
         set((state) => ({
-          profiles: updateProfile(state, activeProfileId, (profile) => ({
-            ...profile,
-            availableBalance: formatAmount(profile.availableBalance - response.amount),
-            pendingBalance: payload.timing === "scheduled" ? formatAmount(profile.pendingBalance + response.amount) : profile.pendingBalance,
-            transactions: [buildTransferTransaction(response), ...profile.transactions]
-          }))
+          profiles: updateProfile(state, activeProfileId, (profile) => {
+            const cardIndex = profile.cards.findIndex(c => c.balance >= response.amount);
+            const targetCardIndex = cardIndex >= 0 ? cardIndex : 0;
+
+            const updatedCards = [...profile.cards];
+            if (updatedCards.length > 0) {
+              updatedCards[targetCardIndex] = {
+                ...updatedCards[targetCardIndex],
+                balance: formatAmount(updatedCards[targetCardIndex].balance - response.amount)
+              };
+            }
+
+            const newAvailableBalance = formatAmount(
+              updatedCards.reduce((sum, card) => sum + card.balance, 0)
+            );
+
+            return {
+              ...profile,
+              cards: updatedCards,
+              availableBalance: newAvailableBalance,
+              pendingBalance: payload.timing === "scheduled" ? formatAmount(profile.pendingBalance + response.amount) : profile.pendingBalance,
+              transactions: [buildTransferTransaction(response), ...profile.transactions]
+            };
+          })
         }));
 
         get().showToast({
-          title: "Transfer submitted",
-          description: `${response.amount.toLocaleString("fr-MA")} ${response.currency} sent to ${response.beneficiary}.`,
+          title: "Virement envoyé",
+          description: `${response.amount.toLocaleString("fr-MA")} ${response.currency} envoyés à ${response.beneficiary}.`,
           variant: "success"
         });
       },
+      
       addInvoice: async (payload) => {
         const response = await createInvoice(payload);
         const activeProfileId = get().activeProfileId;
 
         if (!activeProfileId) {
-          throw new Error("No active profile selected.");
+          throw new Error("Aucun profil actif.");
         }
 
         const invoice: BankingInvoice = {
@@ -175,17 +209,18 @@ export const useAppStore = create<AppState>()(
         }));
 
         get().showToast({
-          title: "Invoice created",
-          description: `${invoice.reference} added to the local invoice list.`,
+          title: "Facture créée",
+          description: `${invoice.reference} ajoutée à la liste.`,
           variant: "success"
         });
       },
+      
       payInvoice: async (invoiceId) => {
         await markInvoicePaid(invoiceId);
         const activeProfileId = get().activeProfileId;
 
         if (!activeProfileId) {
-          throw new Error("No active profile selected.");
+          throw new Error("Aucun profil actif.");
         }
 
         set((state) => ({
@@ -196,35 +231,126 @@ export const useAppStore = create<AppState>()(
         }));
 
         get().showToast({
-          title: "Invoice updated",
-          description: "The selected invoice has been marked as paid.",
+          title: "Facture mise à jour",
+          description: "La facture a été marquée comme payée.",
           variant: "success"
         });
       },
+      
       runDocumentAction: async (documentId, action) => {
         const profile = get().getActiveProfile();
 
         if (!profile) {
-          throw new Error("No active profile selected.");
+          throw new Error("Aucun profil actif.");
         }
 
         const document = profile.documents.find((item) => item.id === documentId);
         if (!document) {
-          throw new Error("Document not found.");
+          throw new Error("Document introuvable.");
         }
 
         const response = await handleDocumentAction(document.name, action);
         get().showToast({
-          title: response.action === "download" ? "Download ready" : response.action === "share" ? "Share ready" : "Email prepared",
+          title: response.action === "download" ? "Téléchargement prêt" : response.action === "share" ? "Partage prêt" : "Email préparé",
           description: `${document.name} - ${response.message}`,
           variant: "default"
         });
       },
+      
+      addCard: (newCard) => {
+        const activeProfileId = get().activeProfileId;
+
+        if (!activeProfileId) return;
+
+        set((state) => ({
+          profiles: updateProfile(state, activeProfileId, (profile) => {
+            const fundingCardIndex = profile.cards.reduce((richestIdx, card, currentIdx, arr) => 
+              card.balance > arr[richestIdx].balance ? currentIdx : richestIdx
+            , 0);
+
+            const updatedCards = [...profile.cards];
+            const fundingCard = updatedCards[fundingCardIndex];
+
+            const actualAllocatedBalance = fundingCard.balance >= newCard.balance 
+              ? newCard.balance 
+              : fundingCard.balance;
+
+            updatedCards[fundingCardIndex] = {
+              ...fundingCard,
+              balance: formatAmount(fundingCard.balance - actualAllocatedBalance)
+            };
+
+            const cardToInsert = {
+              ...newCard,
+              balance: actualAllocatedBalance
+            };
+            
+            updatedCards.push(cardToInsert);
+            
+            const newAvailableBalance = formatAmount(
+              updatedCards.reduce((sum, card) => sum + card.balance, 0)
+            );
+
+            return {
+              ...profile,
+              cards: updatedCards,
+              availableBalance: newAvailableBalance
+            };
+          })
+        }));
+
+        get().showToast({
+          title: "Nouvelle carte activée",
+          description: `La carte "${newCard.name}" a été provisionnée avec succès.`,
+          variant: "success"
+        });
+      },
+
+      // --- LOGIQUE POUR LES ASSURANCES ---
+      toggleInsuranceStatus: (insuranceId) => {
+        const activeProfileId = get().activeProfileId;
+        if (!activeProfileId) return;
+
+        set((state) => ({
+          profiles: updateProfile(state, activeProfileId, (profile) => ({
+            ...profile,
+            employeeInsurances: (profile.employeeInsurances || []).map((ins) => 
+              ins.id === insuranceId 
+                ? { ...ins, status: ins.status === "active" ? "suspended" : "active" } 
+                : ins
+            )
+          }))
+        }));
+        get().showToast({ 
+          title: "Statut mis à jour", 
+          description: "Le statut de couverture a été modifié.", 
+          variant: "success" 
+        });
+      },
+
+      addInsurance: async (payload) => {
+        const activeProfileId = get().activeProfileId;
+        if (!activeProfileId) return;
+
+        set((state) => ({
+          profiles: updateProfile(state, activeProfileId, (profile) => ({
+            ...profile,
+            employeeInsurances: [{ ...payload, id: `ins-${Date.now()}` }, ...(profile.employeeInsurances || [])]
+          }))
+        }));
+        get().showToast({ 
+          title: "Affiliation réussie", 
+          description: `${payload.employeeName} est maintenant couvert.`, 
+          variant: "success" 
+        });
+      },
+      
       getActiveProfile: () => {
         const state = get();
         if (!state.activeProfileId) return null;
         return state.profiles.find((profile) => profile.id === state.activeProfileId) ?? null;
       },
+      
       getProfileById: (profileId) => get().profiles.find((profile) => profile.id === profileId)
     }),
     {

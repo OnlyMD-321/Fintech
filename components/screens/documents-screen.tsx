@@ -109,7 +109,7 @@ export function DocumentsScreen() {
               </Button>
               <Button variant="ghost" className="h-8 text-xs" onClick={() => handleDocAction(doc.id, "share")}>
                 <Share2 size={14} />
-                Partage
+                Partager
               </Button>
             </div>
           </article>

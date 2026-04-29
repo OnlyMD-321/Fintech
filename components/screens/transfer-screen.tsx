@@ -29,7 +29,7 @@ const beneficiaries: Beneficiary[] = [
     accountLabel: "IBAN",
     accountValue: "MA64 0058 1220 0304",
     preferredCurrency: "MAD",
-    defaultReason: "Reglement prestation juridique"
+    defaultReason: "Règlement prestation juridique"
   },
   {
     id: "said-consulting",
@@ -39,7 +39,7 @@ const beneficiaries: Beneficiary[] = [
     accountLabel: "RIB",
     accountValue: "021 780 000 124 001 009 31",
     preferredCurrency: "MAD",
-    defaultReason: "Reglement facture #874"
+    defaultReason: "Règlement facture #874"
   },
   {
     id: "mounia-n",
@@ -383,19 +383,19 @@ export function TransferScreen() {
   return (
     <section className="space-y-3 animate-floatIn md:space-y-4">
       <header>
-        <h1 className="text-xl font-semibold leading-tight md:text-2xl">Faire un virement</h1>
-        <p className="text-sm text-[#6B7280]">Execution rapide et securisee vers vos beneficiaires.</p>
+        <h1 className="text-xl font-semibold leading-tight md:text-2xl">Effectuer un virement</h1>
+        <p className="text-sm text-[#6B7280]">Exécution rapide et sécurisée vers vos bénéficiaires.</p>
       </header>
 
       <div className="grid gap-3 md:grid-cols-[1.35fr_0.85fr] md:items-start">
         <Card className="space-y-3 md:p-4">
           <div>
-            <Label htmlFor="beneficiaire">Beneficiaire</Label>
+            <Label htmlFor="beneficiaire">Bénéficiaire</Label>
             <div ref={suggestionRef} className="relative">
               <Search className="pointer-events-none absolute left-3 top-3 text-[#9CA3AF]" size={15} />
               <Input
                 id="beneficiaire"
-                placeholder="Nom ou societe"
+                placeholder="Nom ou société"
                 className="pl-9"
                 value={beneficiary}
                 onFocus={() => setIsSuggestionOpen(true)}
@@ -439,7 +439,7 @@ export function TransferScreen() {
                       </button>
                     ))
                   ) : (
-                    <p className="px-2 py-2 text-xs text-[#6B7280]">Aucun beneficiaire trouve</p>
+                    <p className="px-2 py-2 text-xs text-[#6B7280]">Aucun bénéficiaire trouvé</p>
                   )}
                 </div>
               )}
@@ -500,8 +500,8 @@ export function TransferScreen() {
               )}
             </div>
             <p className="mt-1 text-[11px] text-[#6B7280]">
-              {accountNature === "IBAN" && "Format detecte: IBAN. Espaces appliques automatiquement."}
-              {accountNature === "RIB" && "Format detecte: RIB. Espaces appliques automatiquement."}
+              {accountNature === "IBAN" && "Format détecté: IBAN. Espaces appliqués automatiquement."}
+              {accountNature === "RIB" && "Format détecté: RIB. Espaces appliqués automatiquement."}
               {accountNature === "UNKNOWN" && "Ce champ accepte IBAN et RIB."}
             </p>
           </div>
@@ -520,7 +520,7 @@ export function TransferScreen() {
               <Label htmlFor="motif">Motif</Label>
               <Input
                 id="motif"
-                placeholder="Reglement facture #874"
+                placeholder="Règlement facture #874"
                 value={reason}
                 onChange={(event) => setReason(event.target.value)}
               />
@@ -528,21 +528,21 @@ export function TransferScreen() {
           </div>
 
           <div>
-            <Label>Execution Date</Label>
+            <Label>Type d'exécution</Label>
             <div className="grid grid-cols-2 gap-2 rounded-xl bg-[#F8FAFC] p-1.5">
               <button
                 type="button"
                 onClick={() => setTiming("immediate")}
                 className={timing === "immediate" ? "rounded-lg bg-white px-3 py-2 text-sm font-semibold text-[#3730A3] shadow-sm" : "rounded-lg px-3 py-2 text-sm font-medium text-[#6B7280]"}
               >
-                Immediate
+                Immédiat
               </button>
               <button
                 type="button"
                 onClick={() => setTiming("scheduled")}
                 className={timing === "scheduled" ? "rounded-lg bg-white px-3 py-2 text-sm font-semibold text-[#3730A3] shadow-sm" : "rounded-lg px-3 py-2 text-sm font-medium text-[#6B7280]"}
               >
-                Scheduled
+                Différé
               </button>
             </div>
           </div>
@@ -552,7 +552,7 @@ export function TransferScreen() {
               <Label htmlFor="montant">Montant</Label>
               <Input
                 id="montant"
-                placeholder="0.00"
+                placeholder="0,00"
                 type="number"
                 value={amount}
                 onChange={(event) => setAmount(event.target.value)}
@@ -573,10 +573,10 @@ export function TransferScreen() {
           </div>
 
           <div>
-            <Label htmlFor="date">Date d&apos;execution</Label>
+            <Label htmlFor="date">Date d'exécution</Label>
             <CompactDatePicker value={executionDate} onChange={setExecutionDate} />
             <p className="mt-1 text-[11px] text-[#6B7280]">
-              {timing === "immediate" ? "Execution immediate selected." : "Execution scheduled selected."}
+              {timing === "immediate" ? "Exécution immédiate sélectionnée." : "Exécution différée sélectionnée."}
             </p>
           </div>
 
@@ -587,7 +587,7 @@ export function TransferScreen() {
 
         <div className="space-y-3 md:sticky md:top-0">
           <Card>
-            <h2 className="mb-2.5 text-sm font-semibold">Beneficiaires favoris</h2>
+            <h2 className="mb-2.5 text-sm font-semibold">Bénéficiaires favoris</h2>
             <div className="flex gap-2.5 overflow-x-auto pb-1 md:flex-wrap md:overflow-visible">
               {beneficiaries.map((item) => (
                 <button
@@ -608,7 +608,7 @@ export function TransferScreen() {
           <Card>
             <h2 className="mb-2.5 flex items-center gap-2 text-sm font-semibold">
               <Star size={14} className="text-[#4F46E5]" />
-              Virements recents
+              Virements récents
             </h2>
             <ul className="space-y-2">
               {recentTransfers.length > 0 ? (
