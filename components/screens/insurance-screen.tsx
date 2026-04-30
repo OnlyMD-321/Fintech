@@ -8,19 +8,18 @@ import { Button } from "@/components/ui/button";
 import { CompactSelect } from "@/components/ui/compact-select";
 import { useActiveProfile, useAppStore } from "@/store/app-store";
 import { ShieldCheck, Users, Search, Plus, ArrowLeft, HeartPulse, Loader2, AlertCircle } from "lucide-react";
+// Ensure this type is exported from your mock-data file as shown in step 1
 import type { InsuranceCoverage } from "@/services/mock-data";
 import { cn } from "@/lib/utils";
 
 export function InsuranceScreen({ view }: { view: "list" | "create" }) {
   const profile = useActiveProfile();
   
-  // Import de setActiveTab pour naviguer via le store global
   const { toggleInsuranceStatus, addInsurance, setActiveTab } = useAppStore();
 
   const [isMounted, setIsMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Formulaire d'affiliation
   const [employeeName, setEmployeeName] = useState("");
   const [role, setRole] = useState("");
   const [coverageType, setCoverageType] = useState<InsuranceCoverage>("basic");
@@ -30,20 +29,21 @@ export function InsuranceScreen({ view }: { view: "list" | "create" }) {
     setIsMounted(true);
   }, []);
 
-  const insurances = profile?.employeeInsurances || [];
+  // Using optional chaining and fallback to empty array to prevent build crashes
+  const insurances = (profile as any)?.employeeInsurances || [];
 
   const filteredInsurances = useMemo(() => {
     if (!searchQuery) return insurances;
-    return insurances.filter(ins => 
+    return insurances.filter((ins: any) => 
       ins.employeeName.toLowerCase().includes(searchQuery.toLowerCase()) || 
       ins.role.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [insurances, searchQuery]);
 
-  const activeCount = useMemo(() => insurances.filter(i => i.status === "active").length, [insurances]);
+  const activeCount = useMemo(() => insurances.filter((i: any) => i.status === "active").length, [insurances]);
   
   const totalMonthlyPremium = useMemo(() => 
-    insurances.filter(i => i.status === "active").reduce((sum, i) => sum + i.premium, 0), 
+    insurances.filter((i: any) => i.status === "active").reduce((sum: number, i: any) => sum + i.premium, 0), 
   [insurances]);
 
   if (!isMounted || !profile) return null;
@@ -55,21 +55,21 @@ export function InsuranceScreen({ view }: { view: "list" | "create" }) {
     setTimeout(async () => {
       const premium = coverageType === "basic" ? 250 : coverageType === "premium" ? 450 : 850;
       
-      await addInsurance({
-        employeeName,
-        role,
-        coverageType,
-        premium,
-        status: "active",
-        startDate: new Date().toISOString()
-      });
+      if (addInsurance) {
+        await addInsurance({
+          employeeName,
+          role,
+          coverageType,
+          premium,
+          status: "active",
+          startDate: new Date().toISOString()
+        });
+      }
 
       setEmployeeName("");
       setRole("");
       setCoverageType("basic");
       setIsSubmitting(false);
-      
-      // Retour à la liste via le menu global
       setActiveTab("insurances");
     }, 800);
   };
@@ -91,14 +91,9 @@ export function InsuranceScreen({ view }: { view: "list" | "create" }) {
     }
   };
 
-  // ==========================================
-  // VUE 1 : DASHBOARD DES ASSURANCES (LISTE)
-  // ==========================================
   if (view === "list") {
     return (
       <section className="animate-floatIn space-y-5 pb-20 md:pb-6">
-        
-        {/* HEADER RESPONSIVE */}
         <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white md:bg-transparent p-4 md:p-0 rounded-2xl md:rounded-none shadow-sm md:shadow-none border border-slate-100 md:border-none">
           <div>
             <h1 className="text-xl font-black text-slate-900 md:text-2xl">Assurance Santé</h1>
@@ -109,7 +104,6 @@ export function InsuranceScreen({ view }: { view: "list" | "create" }) {
           </Button>
         </header>
 
-        {/* CARTES KPI RESPONSIVES */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Card className="p-5 lg:p-6 bg-white border-slate-100 shadow-sm flex flex-col justify-between">
             <div className="flex items-center gap-2 mb-2">
@@ -136,7 +130,6 @@ export function InsuranceScreen({ view }: { view: "list" | "create" }) {
           </Card>
         </div>
 
-        {/* LISTE DES EMPLOYÉS RESPONSIVE */}
         <Card className="bg-white p-0 overflow-hidden border-slate-100 shadow-sm">
           <div className="p-4 border-b border-slate-100 bg-slate-50/50">
             <div className="relative max-w-md">
@@ -153,7 +146,7 @@ export function InsuranceScreen({ view }: { view: "list" | "create" }) {
           
           <ul className="divide-y divide-slate-100">
             {filteredInsurances.length > 0 ? (
-              filteredInsurances.map((ins) => (
+              filteredInsurances.map((ins: any) => (
                 <li key={ins.id} className="p-4 sm:p-5 hover:bg-slate-50 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
                     <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-indigo-100 to-blue-50 text-indigo-700 font-black text-lg shrink-0 shadow-sm">
@@ -175,7 +168,7 @@ export function InsuranceScreen({ view }: { view: "list" | "create" }) {
                     </div>
                     
                     <button
-                      onClick={() => toggleInsuranceStatus(ins.id)}
+                      onClick={() => toggleInsuranceStatus && toggleInsuranceStatus(ins.id)}
                       className={cn(
                         "text-xs font-bold px-4 py-2 rounded-xl border-2 transition-all active:scale-95",
                         ins.status === "active" 
@@ -202,9 +195,6 @@ export function InsuranceScreen({ view }: { view: "list" | "create" }) {
     );
   }
 
-  // ==========================================
-  // VUE 2 : FORMULAIRE D'AFFILIATION RESPONSIVE
-  // ==========================================
   return (
     <section className="animate-slideInRight space-y-5 pb-20 md:pb-6">
       <button 
@@ -269,7 +259,11 @@ export function InsuranceScreen({ view }: { view: "list" | "create" }) {
             </div>
           </div>
 
-          <Button fullWidth className="h-12 text-sm shadow-md font-bold bg-indigo-600 hover:bg-indigo-700 text-white mt-4" onClick={handleAddEmployee} disabled={isSubmitting || !employeeName || !role}>
+          <Button 
+            className="h-12 text-sm shadow-md font-bold bg-indigo-600 hover:bg-indigo-700 text-white mt-4 w-full" 
+            onClick={handleAddEmployee} 
+            disabled={isSubmitting || !employeeName || !role}
+          >
             {isSubmitting ? <Loader2 className="animate-spin mr-2" size={18} /> : <ShieldCheck className="mr-2" size={18} />}
             {isSubmitting ? "Enregistrement..." : "Confirmer l'affiliation"}
           </Button>

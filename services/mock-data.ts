@@ -1,4 +1,4 @@
-export type TabKey = "home" | "transfers" | "invoices" | "invoices-create" | "documents" | "profile" | "cards" | "cards-create";
+export type TabKey = "home" | "transfers" | "invoices" | "invoices-create" | "documents" | "profile" | "cards" | "cards-create" | "insurances" | "insurances-create";
 
 export type CurrencyCode = "MAD";
 
@@ -39,16 +39,15 @@ export type BankingDocument = {
   description: string;
 };
 
-// NOUVEAU : Les sous-comptes qui remplacent les cartes sur le Dashboard
 export type SubAccount = {
   id: string;
   name: string;
   balance: number;
   currency: CurrencyCode;
   theme: "navy-gold" | "ocean-blue" | "emerald";
+  isMain?: boolean; // NOUVEAU: Permet d'identifier le compte source
 };
 
-// NOUVEAU : La gestion avancée des cartes (remplace les assurances)
 export type CardStatus = "active" | "frozen" | "canceled";
 
 export type BankingCard = {
@@ -61,6 +60,19 @@ export type BankingCard = {
   limit: number;
   spent: number;
   status: CardStatus;
+};
+
+export type InsuranceCoverage = "basic" | "premium" | "executive";
+export type InsuranceStatus = "active" | "pending" | "suspended";
+
+export type EmployeeInsurance = {
+  id: string;
+  employeeName: string;
+  role: string;
+  coverageType: InsuranceCoverage;
+  premium: number;
+  status: InsuranceStatus;
+  startDate: string;
 };
 
 export type BankingProfile = {
@@ -85,6 +97,7 @@ export type BankingProfile = {
   invoices: BankingInvoice[];
   documents: BankingDocument[];
   walletNotes: string[];
+  employeeInsurances: EmployeeInsurance[];
 };
 
 export type TransferPayload = {
@@ -114,7 +127,7 @@ export const mockProfiles: BankingProfile[] = [
   {
     id: "younes",
     firstName: "Younes",
-    displayName: "Omlil",
+    displayName: "Belhamdounia",
     gender: "Male",
     companyName: "MyLegal SARL",
     companyAddress: "Tour CFC, Casablanca Finance City, Casablanca",
@@ -128,20 +141,8 @@ export const mockProfiles: BankingProfile[] = [
     availableBalance: 0, 
     pendingBalance: 18000,
     subAccounts: [
-      {
-        id: "sub-y-1",
-        name: "Compte Principal",
-        balance: 145000.50,
-        currency: "MAD",
-        theme: "navy-gold"
-      },
-      {
-        id: "sub-y-2",
-        name: "Provision TVA & Impôts",
-        balance: 35400.00,
-        currency: "MAD",
-        theme: "emerald"
-      }
+      { id: "sub-y-1", name: "Compte Principal", balance: 145000.50, currency: "MAD", theme: "navy-gold", isMain: true },
+      { id: "sub-y-2", name: "Provision TVA & Impôts", balance: 35400.00, currency: "MAD", theme: "emerald" }
     ],
     cards: [
       { id: "card-y-1", name: "Carte Corporate", cardholder: "Younes Omlil", network: "VISA", maskedPan: "•••• 2456", expiry: "12/28", limit: 50000, spent: 12450, status: "active" },
@@ -160,7 +161,10 @@ export const mockProfiles: BankingProfile[] = [
       { id: "inv-y-3", reference: "F-2026-043", clientName: "ONCF", invoiceObject: "Rédaction Statuts", amountHT: 40000, vat: 20, totalTTC: 48000, dueDate: "2026-05-25T00:00:00.000Z", status: "draft", createdAt: "2026-04-25T09:15:00.000Z" }
     ],
     documents: [],
-    walletNotes: ["Liquidité MAD sécurisée", "Préparation bilan 2025"]
+    walletNotes: ["Liquidité MAD sécurisée", "Préparation bilan 2025"],
+    employeeInsurances: [
+      { id: "ins-1", employeeName: "Amine Bennani", role: "Développeur", coverageType: "premium", premium: 450, status: "active", startDate: "2026-01-01T00:00:00.000Z" }
+    ]
   },
   {
     id: "kenza",
@@ -179,7 +183,7 @@ export const mockProfiles: BankingProfile[] = [
     availableBalance: 0,
     pendingBalance: 12500,
     subAccounts: [
-      { id: "sub-k-1", name: "Opérations Courantes", balance: 285400.00, currency: "MAD", theme: "ocean-blue" },
+      { id: "sub-k-1", name: "Opérations Courantes", balance: 285400.00, currency: "MAD", theme: "ocean-blue", isMain: true },
       { id: "sub-k-2", name: "Fonds de Roulement", balance: 150000.00, currency: "MAD", theme: "navy-gold" }
     ],
     cards: [
@@ -195,13 +199,13 @@ export const mockProfiles: BankingProfile[] = [
     ],
     invoices: [],
     documents: [],
-    walletNotes: ["Croissance Q2", "Renouvellement parc IT"]
+    walletNotes: ["Croissance Q2", "Renouvellement parc IT"],
+    employeeInsurances: []
   }
 ];
 
 export function createInitialProfiles() {
   return mockProfiles.map((profile) => {
-    // Le solde global est la somme des sous-comptes
     const computedGlobalBalance = profile.subAccounts.reduce((sum, acc) => sum + acc.balance, 0);
     return {
       ...profile,
@@ -211,7 +215,8 @@ export function createInitialProfiles() {
       transactions: profile.transactions.map((transaction) => ({ ...transaction })),
       invoices: profile.invoices.map((invoice) => ({ ...invoice })),
       documents: profile.documents.map((document) => ({ ...document })),
-      walletNotes: [...profile.walletNotes]
+      walletNotes: [...profile.walletNotes],
+      employeeInsurances: [...profile.employeeInsurances]
     };
   });
 }

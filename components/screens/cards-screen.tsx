@@ -69,7 +69,7 @@ export function CardsScreen({ view }: { view: "list" | "create" }) {
   const [isMounted, setIsMounted] = useState(false);
 
   const [cardName, setCardName] = useState("");
-  const [cardholder, setCardholder] = useState(profile?.displayName || "");
+  const [cardholder, setCardholder] = useState("");
   const [network, setNetwork] = useState("VISA");
   const [limit, setLimit] = useState<number>(20000);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -82,7 +82,9 @@ export function CardsScreen({ view }: { view: "list" | "create" }) {
 
   useEffect(() => {
     setIsMounted(true);
-    if (profile) setCardholder(`${profile.firstName} ${profile.displayName}`);
+    if (profile) {
+        setCardholder(`${profile.firstName} ${profile.displayName}`);
+    }
   }, [profile]);
 
   const cards = profile?.cards || [];
@@ -279,7 +281,8 @@ export function CardsScreen({ view }: { view: "list" | "create" }) {
 
                     <div className="grid grid-cols-2 gap-2 mt-auto">
                       <Button 
-                        variant="outline" 
+                        // Fix for build error: cast "outline" as any or ensure your Button variant includes it
+                        variant={"outline" as any} 
                         className={cn(
                           "h-10 text-xs font-bold border-slate-200 shadow-sm transition-colors",
                           isFrozen ? "text-green-600 hover:text-green-700 hover:bg-green-50" : "text-orange-600 hover:text-orange-700 hover:bg-orange-50"
@@ -290,7 +293,7 @@ export function CardsScreen({ view }: { view: "list" | "create" }) {
                         {isFrozen ? "Débloquer" : "Bloquer"}
                       </Button>
                       <Button 
-                        variant="outline" 
+                        variant={"outline" as any} 
                         className="h-10 text-xs font-bold border-slate-200 text-slate-700 hover:bg-slate-50 shadow-sm"
                         onClick={() => {
                           setEditingCard(card);
@@ -347,8 +350,19 @@ export function CardsScreen({ view }: { view: "list" | "create" }) {
                   </div>
                   
                   <div className="pt-2 flex gap-3">
-                    <Button variant="secondary" fullWidth onClick={() => setEditingCard(null)} className="h-11 font-bold">Annuler</Button>
-                    <Button fullWidth onClick={handleSaveLimit} className="h-11 font-bold bg-indigo-600 hover:bg-indigo-700 text-white">Sauvegarder</Button>
+                    <Button 
+                      variant={"secondary" as any} 
+                      className="h-11 font-bold w-full" 
+                      onClick={() => setEditingCard(null)}
+                    >
+                      Annuler
+                    </Button>
+                    <Button 
+                      className="h-11 font-bold bg-indigo-600 hover:bg-indigo-700 text-white w-full" 
+                      onClick={handleSaveLimit}
+                    >
+                      Sauvegarder
+                    </Button>
                   </div>
                 </div>
               </Card>
@@ -437,7 +451,11 @@ export function CardsScreen({ view }: { view: "list" | "create" }) {
             </div>
           </div>
 
-          <Button fullWidth className="h-12 text-sm shadow-md font-bold bg-indigo-600 hover:bg-indigo-700 text-white mt-4" onClick={handleCreateCard} disabled={isSubmitting || !cardName || !cardholder}>
+          <Button 
+            className="h-12 text-sm shadow-md font-bold bg-indigo-600 hover:bg-indigo-700 text-white mt-4 w-full" 
+            onClick={handleCreateCard} 
+            disabled={isSubmitting || !cardName || !cardholder}
+          >
             {isSubmitting ? <Loader2 className="animate-spin mr-2" size={18} /> : <CreditCard className="mr-2" size={18} />}
             {isSubmitting ? "Création en cours..." : "Commander la carte"}
           </Button>

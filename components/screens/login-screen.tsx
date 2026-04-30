@@ -5,7 +5,8 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { LockKeyhole, Mail, ShieldCheck, Sparkles } from "lucide-react";
+// FIXED: Added Loader2 to the imports
+import { LockKeyhole, Mail, ShieldCheck, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -49,12 +50,8 @@ export function LoginScreen() {
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,rgba(29,171,252,0.16),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(6,20,56,0.18),transparent_38%),linear-gradient(180deg,#F3F6F9_0%,#EBF0FE_100%)] px-4 py-4 md:px-6 md:py-6 text-mylegal-navy">
       
-      {/* Conteneur principal : Flex sur mobile/tablette, Grille sur Desktop (lg) */}
       <div className="mx-auto flex flex-col lg:grid min-h-[calc(100vh-2rem)] max-w-[1400px] gap-4 overflow-hidden rounded-[2rem] border border-white/70 bg-white/55 p-3 shadow-soft backdrop-blur-xl lg:grid-cols-[1fr_1fr] xl:grid-cols-[1.05fr_0.95fr] lg:p-4">
         
-        {/* =========================================
-            SECTION GAUCHE (NAVY)
-        ========================================= */}
         <section className="relative flex flex-col justify-between gap-8 overflow-hidden rounded-2xl bg-mylegal-navy p-6 text-white md:rounded-[1.5rem] lg:p-8">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(29,171,252,0.26),transparent_30%),radial-gradient(circle_at_bottom_left,rgba(219,239,251,0.18),transparent_26%)]" />
           
@@ -79,7 +76,6 @@ export function LoginScreen() {
           </div>
 
           <div className="relative z-10 mt-auto">
-            {/* Cartes Profils de Démo */}
             <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
               {profiles.slice(0, 2).map((p, idx) => (
                 <div key={p.id} className="rounded-2xl border border-white/10 bg-white/10 p-4 sm:p-5 backdrop-blur-sm">
@@ -91,7 +87,6 @@ export function LoginScreen() {
               ))}
             </div>
 
-            {/* Badges de fonctionnalités (Cachés sur mobile pour gagner de la place) */}
             <div className="mt-4 hidden lg:grid gap-3 text-xs xl:text-sm font-medium text-white/80 grid-cols-3">
               <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-center">Sessions Zustand persistées</div>
               <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-center">Services API simulés</div>
@@ -100,9 +95,6 @@ export function LoginScreen() {
           </div>
         </section>
 
-        {/* =========================================
-            SECTION DROITE (LOGIN)
-        ========================================= */}
         <section className="flex flex-1 items-center justify-center rounded-2xl bg-white p-5 py-8 md:rounded-[1.5rem] lg:p-8">
           <Card className="w-full max-w-[420px] lg:max-w-[470px] space-y-6 lg:space-y-8 border-none bg-transparent p-0 shadow-none sm:border-solid sm:border-mylegal-cloud sm:bg-mylegal-fog/65 sm:p-6 sm:shadow-sm lg:p-8">
             
@@ -133,7 +125,8 @@ export function LoginScreen() {
 
               {loginError && <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-xs font-bold text-rose-700">{loginError}</div>}
 
-              <Button type="submit" fullWidth disabled={isSubmitting} className="h-11 sm:h-12 text-sm font-bold bg-indigo-600 hover:bg-indigo-700 mt-2">
+              {/* FIXED: standard w-full class instead of fullWidth prop */}
+              <Button type="submit" className="h-11 sm:h-12 w-full text-sm font-bold bg-indigo-600 hover:bg-indigo-700 mt-2" disabled={isSubmitting}>
                 {isSubmitting ? <Loader2 className="animate-spin mr-2" size={18} /> : <ShieldCheck className="mr-2" size={18} />}
                 {isSubmitting ? "Connexion en cours..." : "Se connecter"}
               </Button>

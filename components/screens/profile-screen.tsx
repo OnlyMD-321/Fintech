@@ -20,7 +20,7 @@ export function ProfileScreen() {
       </header>
 
       <div className="grid gap-4 md:grid-cols-12">
-        {/* CARTE D'IDENTITÉ (Prend toute la largeur sur mobile, 8 colonnes sur Desktop) */}
+        {/* CARTE D'IDENTITÉ (Prend toute la largeur sur mobile, 12 colonnes sur Desktop) */}
         <Card className="col-span-1 md:col-span-12 lg:col-span-8 p-5 lg:p-6 bg-white border-slate-100 shadow-sm space-y-6">
           <div className="flex items-center gap-4">
             <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-600 to-blue-500 text-2xl font-black text-white shadow-md shrink-0">
@@ -85,16 +85,21 @@ export function ProfileScreen() {
             </div>
             
             <div className="space-y-2">
-              <Button variant="outline" className="w-full justify-start h-11 text-sm font-bold border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900">
+              <Button 
+                variant={"outline" as any} 
+                className="w-full justify-start h-11 text-sm font-bold border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+              >
                 Gérer les accès équipe
               </Button>
-              <Button variant="outline" className="w-full justify-start h-11 text-sm font-bold border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900">
+              <Button 
+                variant={"outline" as any} 
+                className="w-full justify-start h-11 text-sm font-bold border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+              >
                 Préférences d'affichage
               </Button>
               
-              {/* NOUVEAU BOUTON : MES DOCUMENTS */}
               <Button 
-                variant="outline" 
+                variant={"outline" as any} 
                 className="w-full justify-start h-11 text-sm font-bold border-slate-200 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700"
                 onClick={() => setActiveTab("documents")}
               >
@@ -103,7 +108,11 @@ export function ProfileScreen() {
               </Button>
 
               <div className="pt-2 border-t border-slate-100 mt-2">
-                <Button variant="ghost" className="w-full justify-start h-11 text-sm font-bold text-red-600 hover:bg-red-50 hover:text-red-700" onClick={logout}>
+                <Button 
+                  variant={"ghost" as any} 
+                  className="w-full justify-start h-11 text-sm font-bold text-red-600 hover:bg-red-50 hover:text-red-700" 
+                  onClick={logout}
+                >
                   <LogOut size={16} className="mr-2" />
                   Déconnexion
                 </Button>

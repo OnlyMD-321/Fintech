@@ -161,16 +161,13 @@ export function DocumentsScreen() {
   if (!isMounted || !profile) return null;
 
   return (
-    // pb-20 assure que le contenu n'est pas caché par la barre de navigation sur mobile
     <section className="animate-floatIn space-y-5 pb-20 md:pb-6">
       
-      {/* HEADER RESPONSIVE */}
       <header className="bg-white md:bg-transparent p-5 md:p-0 rounded-2xl md:rounded-none shadow-sm md:shadow-none border border-slate-100 md:border-none">
         <h1 className="text-xl font-black text-slate-900 md:text-2xl">Documents officiels</h1>
         <p className="text-sm text-slate-500 mt-1">Gérez et téléchargez vos attestations bancaires.</p>
       </header>
 
-      {/* GRILLE ADAPTATIVE (1 colonne mobile, 2 colonnes tablette/desktop) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {STANDARD_DOCUMENTS.map((doc) => {
           const Icon = doc.icon;
@@ -188,7 +185,6 @@ export function DocumentsScreen() {
                   </div>
                 </div>
                 
-                {/* MENU DÉROULANT (Position Absolue pour ne pas casser le design) */}
                 <div className="relative">
                   <button 
                     onClick={() => setMenuFor(prev => prev === doc.id ? null : doc.id)} 
@@ -207,11 +203,10 @@ export function DocumentsScreen() {
                 </div>
               </div>
 
-              {/* BOUTONS D'ACTION (Grille 3 colonnes) */}
               <div className="mt-auto">
                 <div className="grid grid-cols-3 gap-2">
                   <Button 
-                    variant="outline" 
+                    variant={"outline" as any} 
                     className="h-10 text-[11px] font-bold border-indigo-100 text-indigo-700 bg-indigo-50/50 hover:bg-indigo-100 transition-colors px-0" 
                     onClick={() => handleAction(doc.id, doc.name, "download")} 
                     disabled={!!processingId}
@@ -220,14 +215,14 @@ export function DocumentsScreen() {
                     PDF
                   </Button>
                   <Button 
-                    variant="ghost" 
+                    variant={"ghost" as any} 
                     className="h-10 text-[11px] font-semibold bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-0" 
                     onClick={() => handleAction(doc.id, doc.name, "email")}
                   >
                     <Mail size={14} className="mr-1.5" /> Email
                   </Button>
                   <Button 
-                    variant="ghost" 
+                    variant={"ghost" as any} 
                     className="h-10 text-[11px] font-semibold bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 px-0" 
                     onClick={() => handleAction(doc.id, doc.name, "share")}
                   >

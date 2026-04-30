@@ -13,7 +13,8 @@ import {
   type LoginPayload,
   type TabKey,
   type TransferPayload,
-  type EmployeeInsurance // <-- NOUVEL IMPORT
+  type EmployeeInsurance,
+  type SubAccount // <-- NOUVEL IMPORT
 } from "@/services/mock-data";
 import { createInvoice, createTransfer, handleDocumentAction, loginWithCredentials, loginWithProfile, markInvoicePaid } from "@/services/mock-api";
 
@@ -46,13 +47,13 @@ type AppState = {
   getActiveProfile: () => BankingProfile | null;
   getProfileById: (profileId: string) => BankingProfile | undefined;
   addCard: (newCard: BankingCard) => void;
-  
-  // NOUVELLES ACTIONS ASSURANCE
   toggleInsuranceStatus: (insuranceId: string) => void;
   addInsurance: (payload: Omit<EmployeeInsurance, "id">) => Promise<void>;
+  
+  // NOUVELLE ACTION SOUS-COMPTE
+  addSubAccount: (newAccount: SubAccount) => void;
 };
 
-// Initialisation via mock-data.ts
 const initialProfiles = createInitialProfiles();
 
 function formatAmount(amount: number) {
@@ -142,25 +143,23 @@ export const useAppStore = create<AppState>()(
         const response = await createTransfer(payload);
         const activeProfileId = get().activeProfileId;
 
-        if (!activeProfileId) {
-          throw new Error("Aucun profil actif.");
-        }
+        if (!activeProfileId) throw new Error("Aucun profil actif.");
 
         set((state) => ({
           profiles: updateProfile(state, activeProfileId, (profile) => {
-            const cardIndex = profile.cards.findIndex(c => c.balance >= response.amount);
+            const cardIndex = profile.cards.findIndex(c => (c.limit - c.spent) >= response.amount);
             const targetCardIndex = cardIndex >= 0 ? cardIndex : 0;
 
             const updatedCards = [...profile.cards];
             if (updatedCards.length > 0) {
               updatedCards[targetCardIndex] = {
                 ...updatedCards[targetCardIndex],
-                balance: formatAmount(updatedCards[targetCardIndex].balance - response.amount)
+                spent: formatAmount(updatedCards[targetCardIndex].spent + response.amount)
               };
             }
 
             const newAvailableBalance = formatAmount(
-              updatedCards.reduce((sum, card) => sum + card.balance, 0)
+              updatedCards.reduce((sum, card) => sum + (card.limit - card.spent), 0)
             );
 
             return {
@@ -183,23 +182,9 @@ export const useAppStore = create<AppState>()(
       addInvoice: async (payload) => {
         const response = await createInvoice(payload);
         const activeProfileId = get().activeProfileId;
+        if (!activeProfileId) throw new Error("Aucun profil actif.");
 
-        if (!activeProfileId) {
-          throw new Error("Aucun profil actif.");
-        }
-
-        const invoice: BankingInvoice = {
-          id: response.id,
-          reference: response.reference,
-          clientName: response.clientName,
-          invoiceObject: response.invoiceObject,
-          amountHT: response.amountHT,
-          vat: response.vat,
-          totalTTC: response.totalTTC,
-          dueDate: response.dueDate,
-          status: response.status,
-          createdAt: response.createdAt
-        };
+        const invoice: BankingInvoice = { ...response };
 
         set((state) => ({
           profiles: updateProfile(state, activeProfileId, (profile) => ({
@@ -218,10 +203,7 @@ export const useAppStore = create<AppState>()(
       payInvoice: async (invoiceId) => {
         await markInvoicePaid(invoiceId);
         const activeProfileId = get().activeProfileId;
-
-        if (!activeProfileId) {
-          throw new Error("Aucun profil actif.");
-        }
+        if (!activeProfileId) throw new Error("Aucun profil actif.");
 
         set((state) => ({
           profiles: updateProfile(state, activeProfileId, (profile) => ({
@@ -239,15 +221,10 @@ export const useAppStore = create<AppState>()(
       
       runDocumentAction: async (documentId, action) => {
         const profile = get().getActiveProfile();
-
-        if (!profile) {
-          throw new Error("Aucun profil actif.");
-        }
+        if (!profile) throw new Error("Aucun profil actif.");
 
         const document = profile.documents.find((item) => item.id === documentId);
-        if (!document) {
-          throw new Error("Document introuvable.");
-        }
+        if (!document) throw new Error("Document introuvable.");
 
         const response = await handleDocumentAction(document.name, action);
         get().showToast({
@@ -259,36 +236,14 @@ export const useAppStore = create<AppState>()(
       
       addCard: (newCard) => {
         const activeProfileId = get().activeProfileId;
-
         if (!activeProfileId) return;
 
         set((state) => ({
           profiles: updateProfile(state, activeProfileId, (profile) => {
-            const fundingCardIndex = profile.cards.reduce((richestIdx, card, currentIdx, arr) => 
-              card.balance > arr[richestIdx].balance ? currentIdx : richestIdx
-            , 0);
-
-            const updatedCards = [...profile.cards];
-            const fundingCard = updatedCards[fundingCardIndex];
-
-            const actualAllocatedBalance = fundingCard.balance >= newCard.balance 
-              ? newCard.balance 
-              : fundingCard.balance;
-
-            updatedCards[fundingCardIndex] = {
-              ...fundingCard,
-              balance: formatAmount(fundingCard.balance - actualAllocatedBalance)
-            };
-
-            const cardToInsert = {
-              ...newCard,
-              balance: actualAllocatedBalance
-            };
-            
-            updatedCards.push(cardToInsert);
+            const updatedCards = [...profile.cards, newCard];
             
             const newAvailableBalance = formatAmount(
-              updatedCards.reduce((sum, card) => sum + card.balance, 0)
+              updatedCards.reduce((sum, card) => sum + (card.limit - card.spent), 0)
             );
 
             return {
@@ -301,12 +256,11 @@ export const useAppStore = create<AppState>()(
 
         get().showToast({
           title: "Nouvelle carte activée",
-          description: `La carte "${newCard.name}" a été provisionnée avec succès.`,
+          description: `La carte "${newCard.name}" est prête à l'emploi.`,
           variant: "success"
         });
       },
 
-      // --- LOGIQUE POUR LES ASSURANCES ---
       toggleInsuranceStatus: (insuranceId) => {
         const activeProfileId = get().activeProfileId;
         if (!activeProfileId) return;
@@ -343,6 +297,50 @@ export const useAppStore = create<AppState>()(
           description: `${payload.employeeName} est maintenant couvert.`, 
           variant: "success" 
         });
+      },
+
+      // --- NOUVEAU: Logique de création et d'allocation des sous-comptes ---
+      addSubAccount: (newAccount) => {
+        const activeProfileId = get().activeProfileId;
+        if (!activeProfileId) return;
+
+        set((state) => ({
+          profiles: updateProfile(state, activeProfileId, (profile) => {
+            const updatedSubAccounts = [...profile.subAccounts];
+            
+            // 1. Chercher le compte principal (celui d'où l'argent sera déduit)
+            const mainAccountIndex = updatedSubAccounts.findIndex(acc => acc.isMain);
+            
+            if (mainAccountIndex !== -1) {
+              const mainAccount = updatedSubAccounts[mainAccountIndex];
+              
+              // 2. Déduire le montant du compte principal de manière sécurisée
+              const safeDeduction = mainAccount.balance >= newAccount.balance ? newAccount.balance : mainAccount.balance;
+              
+              updatedSubAccounts[mainAccountIndex] = {
+                ...mainAccount,
+                balance: formatAmount(mainAccount.balance - safeDeduction)
+              };
+
+              // Assurer que le nouveau compte ne reçoit que l'argent effectivement déduit
+              newAccount.balance = formatAmount(safeDeduction);
+            }
+
+            // 3. Ajouter le nouveau sous-compte à la liste
+            updatedSubAccounts.push(newAccount);
+
+            // 4. Mettre à jour le solde global disponible (qui reste le même globalement, l'argent étant juste déplacé)
+            const newAvailableBalance = formatAmount(
+              updatedSubAccounts.reduce((sum, acc) => sum + acc.balance, 0)
+            );
+
+            return {
+              ...profile,
+              subAccounts: updatedSubAccounts,
+              availableBalance: newAvailableBalance
+            };
+          })
+        }));
       },
       
       getActiveProfile: () => {

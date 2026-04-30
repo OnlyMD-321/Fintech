@@ -76,6 +76,7 @@ export function DashboardScreen() {
   // --- ÉTATS POUR LA CRÉATION DE SOUS-COMPTE ---
   const [isSubAccountModalOpen, setIsSubAccountModalOpen] = useState(false);
   const [newSubAccountName, setNewSubAccountName] = useState("");
+  const [allocationAmount, setAllocationAmount] = useState(""); // NOUVEAU: Montant alloué
   const [newSubAccountTheme, setNewSubAccountTheme] = useState<"navy-gold" | "ocean-blue" | "emerald">("ocean-blue");
   const [isCreatingSubAccount, setIsCreatingSubAccount] = useState(false);
 
@@ -168,34 +169,45 @@ export function DashboardScreen() {
     return d.toLocaleDateString("fr-MA", { day: "2-digit", month: "short" }) + ", " + d.toLocaleTimeString("fr-MA", { hour: "2-digit", minute: "2-digit" });
   };
 
+  // --- LOGIQUE DE CRÉATION DE SOUS-COMPTE MISE À JOUR ---
+  // On identifie le compte principal (soit par le flag isMain, soit le premier de la liste par défaut)
+  const mainAccount = profile?.subAccounts?.find((acc: any) => acc.isMain) || profile?.subAccounts?.[0];
+  const maxAllocation = mainAccount?.balance || 0;
+
   const handleCreateSubAccount = () => {
-    if (!newSubAccountName.trim()) return;
+    const amount = Number(allocationAmount);
+
+    if (!newSubAccountName.trim() || isNaN(amount) || amount < 0 || amount > maxAllocation) {
+      showToast?.({ title: "Erreur", description: "Veuillez vérifier les informations saisies.", variant: "destructive" });
+      return;
+    }
+
     setIsCreatingSubAccount(true);
 
     setTimeout(() => {
       const newAccount = {
         id: `sub-${Date.now()}`,
         name: newSubAccountName,
-        balance: 0,
+        balance: amount, // Le solde initial est maintenant dynamique
         currency: profile!.currency,
-        theme: newSubAccountTheme
+        theme: newSubAccountTheme,
+        isMain: false
       };
 
       if (addSubAccount) {
         addSubAccount(newAccount);
-      } else {
-        if (profile) profile.subAccounts.push(newAccount as any);
       }
 
       showToast?.({
         title: "Sous-compte ouvert",
-        description: `Le compte "${newSubAccountName}" est prêt à être utilisé.`,
+        description: `Le compte "${newSubAccountName}" est provisionné avec ${amount.toLocaleString("fr-MA")} ${profile!.currency}.`,
         variant: "success"
       });
 
       setIsCreatingSubAccount(false);
       setIsSubAccountModalOpen(false);
       setNewSubAccountName("");
+      setAllocationAmount("");
     }, 800);
   };
 
@@ -203,19 +215,19 @@ export function DashboardScreen() {
 
   const quickAccessButtons = (
     <div className="flex items-center gap-3 overflow-x-auto pb-3 pt-1 px-1 [&::-webkit-scrollbar]:hidden scroll-smooth">
-      <Button onClick={() => setActiveTab("transfers")} variant="outline" className="h-11 rounded-xl px-4 gap-2 whitespace-nowrap bg-white text-sm font-semibold shadow-sm border border-slate-200 hover:bg-slate-50 hover:border-indigo-200 transition-all">
+      <Button onClick={() => setActiveTab("transfers")} variant={"outline" as any} className="h-11 rounded-xl px-4 gap-2 whitespace-nowrap bg-white text-sm font-semibold shadow-sm border border-slate-200 hover:bg-slate-50 hover:border-indigo-200 transition-all">
         <ArrowUpRight size={16} className="text-indigo-600" /> Virement
       </Button>
-      <Button onClick={() => setActiveTab("invoices-create")} variant="outline" className="h-11 rounded-xl px-4 gap-2 whitespace-nowrap bg-white text-sm font-semibold shadow-sm border border-slate-200 hover:bg-slate-50 hover:border-indigo-200 transition-all">
+      <Button onClick={() => setActiveTab("invoices-create")} variant={"outline" as any} className="h-11 rounded-xl px-4 gap-2 whitespace-nowrap bg-white text-sm font-semibold shadow-sm border border-slate-200 hover:bg-slate-50 hover:border-indigo-200 transition-all">
         <Plus size={16} className="text-indigo-600" /> Facture
       </Button>
-      <Button onClick={() => setActiveTab("cards")} variant="outline" className="h-11 rounded-xl px-4 gap-2 whitespace-nowrap bg-white text-sm font-semibold shadow-sm border border-slate-200 hover:bg-slate-50 hover:border-indigo-200 transition-all">
+      <Button onClick={() => setActiveTab("cards")} variant={"outline" as any} className="h-11 rounded-xl px-4 gap-2 whitespace-nowrap bg-white text-sm font-semibold shadow-sm border border-slate-200 hover:bg-slate-50 hover:border-indigo-200 transition-all">
         <CreditCard size={16} className="text-indigo-600" /> Cartes
       </Button>
-      <Button onClick={() => setActiveTab("documents")} variant="outline" className="h-11 rounded-xl px-4 gap-2 whitespace-nowrap bg-white text-sm font-semibold shadow-sm border border-slate-200 hover:bg-slate-50 hover:border-indigo-200 transition-all">
+      <Button onClick={() => setActiveTab("documents")} variant={"outline" as any} className="h-11 rounded-xl px-4 gap-2 whitespace-nowrap bg-white text-sm font-semibold shadow-sm border border-slate-200 hover:bg-slate-50 hover:border-indigo-200 transition-all">
         <FileText size={16} className="text-indigo-600" /> RIB
       </Button>
-      <Button onClick={() => setActiveTab("home")} variant="outline" className="h-11 rounded-xl px-4 gap-2 whitespace-nowrap bg-white text-sm font-semibold shadow-sm border border-slate-200 hover:bg-slate-50 hover:border-indigo-200 transition-all">
+      <Button onClick={() => setActiveTab("home")} variant={"outline" as any} className="h-11 rounded-xl px-4 gap-2 whitespace-nowrap bg-white text-sm font-semibold shadow-sm border border-slate-200 hover:bg-slate-50 hover:border-indigo-200 transition-all">
         <History size={16} className="text-indigo-600" /> Historique
       </Button>
     </div>
@@ -273,12 +285,16 @@ export function DashboardScreen() {
               {profile.subAccounts?.map((acc) => (
                 <div key={acc.id} className={cn("relative shrink-0 w-[270px] sm:w-[290px] snap-center overflow-hidden rounded-2xl p-5 text-white shadow-md", acc.theme === "navy-gold" ? "bg-slate-900" : acc.theme === "ocean-blue" ? "bg-blue-600" : "bg-emerald-600")}>
                   <div className="mb-5 flex items-center justify-between opacity-80">
-                    <span className="text-[10px] font-bold uppercase tracking-widest">Sous-compte</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest">
+                      {(acc as any).isMain ? "Compte Principal" : "Sous-compte"}
+                    </span>
                     <Wallet size={18} />
                   </div>
                   <p className="text-xl font-bold tracking-widest truncate">{acc.name}</p>
                   <div className="mt-6">
-                    <p className="text-[10px] opacity-80 uppercase tracking-wider mb-1">Solde alloué</p>
+                    <p className="text-[10px] opacity-80 uppercase tracking-wider mb-1">
+                      {(acc as any).isMain ? "Solde disponible" : "Solde alloué"}
+                    </p>
                     <p className="text-xl font-bold">{acc.balance.toLocaleString("fr-MA")} {acc.currency}</p>
                   </div>
                 </div>
@@ -433,12 +449,17 @@ export function DashboardScreen() {
         </Card>
       </div>
 
+      {/* --- MODAL DE CRÉATION DE SOUS-COMPTE MISE À JOUR --- */}
       {isSubAccountModalOpen && isMounted && (
         <ModalPortal>
           <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm animate-in fade-in duration-200">
             <Card className="w-full max-w-md space-y-5 bg-white p-6 shadow-2xl relative animate-in zoom-in-95">
               <button 
-                onClick={() => setIsSubAccountModalOpen(false)} 
+                onClick={() => {
+                  setIsSubAccountModalOpen(false);
+                  setAllocationAmount("");
+                  setNewSubAccountName("");
+                }} 
                 className="absolute right-5 top-5 text-slate-400 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 p-1.5 rounded-full transition-colors"
               >
                 <X size={18} />
@@ -458,6 +479,27 @@ export function DashboardScreen() {
                     onChange={(e) => setNewSubAccountName(e.target.value)} 
                     className="h-11 text-sm font-medium shadow-sm" 
                   />
+                </div>
+
+                {/* NOUVEAU: Champ d'allocation dynamique */}
+                <div>
+                  <Label className="text-[11px] font-bold uppercase text-slate-500 mb-1.5 flex justify-between tracking-wider">
+                    <span>Montant alloué ({profile.currency})</span>
+                    <span className="text-indigo-600">Max: {maxAllocation.toLocaleString("fr-MA")}</span>
+                  </Label>
+                  <Input 
+                    type="number" 
+                    placeholder="Ex: 50000" 
+                    value={allocationAmount} 
+                    onChange={(e) => setAllocationAmount(e.target.value)} 
+                    className={cn(
+                      "h-11 text-sm font-medium shadow-sm", 
+                      Number(allocationAmount) > maxAllocation ? "border-red-500 focus-visible:ring-red-100" : ""
+                    )} 
+                  />
+                  {Number(allocationAmount) > maxAllocation && (
+                    <p className="text-[10px] text-red-500 font-bold mt-1.5">Fonds insuffisants sur le compte principal.</p>
+                  )}
                 </div>
                 
                 <div>
@@ -484,12 +526,21 @@ export function DashboardScreen() {
                 </div>
                 
                 <div className="pt-2 flex gap-3">
-                  <Button variant="secondary" fullWidth onClick={() => setIsSubAccountModalOpen(false)} className="h-11 font-bold">Annuler</Button>
                   <Button 
-                    fullWidth 
+                    variant={"secondary" as any} 
+                    className="h-11 font-bold w-full" 
+                    onClick={() => {
+                      setIsSubAccountModalOpen(false);
+                      setAllocationAmount("");
+                      setNewSubAccountName("");
+                    }}
+                  >
+                    Annuler
+                  </Button>
+                  <Button 
+                    className="h-11 font-bold bg-indigo-600 hover:bg-indigo-700 text-white w-full" 
                     onClick={handleCreateSubAccount} 
-                    disabled={!newSubAccountName.trim() || isCreatingSubAccount} 
-                    className="h-11 font-bold bg-indigo-600 hover:bg-indigo-700 text-white"
+                    disabled={!newSubAccountName.trim() || isCreatingSubAccount || Number(allocationAmount) > maxAllocation || Number(allocationAmount) < 0 || allocationAmount === ""}
                   >
                     {isCreatingSubAccount ? <Loader2 className="animate-spin mr-2" size={16} /> : <PieChart className="mr-2" size={16} />}
                     {isCreatingSubAccount ? "Ouverture..." : "Ouvrir le compte"}
