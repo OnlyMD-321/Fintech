@@ -8,12 +8,24 @@ import { Button } from "@/components/ui/button";
 import { CompactSelect } from "@/components/ui/compact-select";
 import { CompactDatePicker } from "@/components/ui/compact-date-picker";
 import { useActiveProfile, useAppStore } from "@/store/app-store";
+import { ArrowLeft, CheckCircle2, Clock3, FileText, Plus, Receipt, Download, Loader2 } from "lucide-react";
+import type { BankingInvoice } from "@/services/mock-data";
+import { cn } from "@/lib/utils";
 
-export function InvoiceScreen() {
+const LOGO_URL = "https://i.ibb.co/Fk5yz9xF/logo-light.png";
+
+
+export function InvoiceScreen({ view }: { view: "list" | "create" }) {
+
   const profile = useActiveProfile();
-  const { addInvoice, payInvoice, setActiveTab } = useAppStore();
+  const { addInvoice, payInvoice, showToast, setActiveTab } = useAppStore();
   const storageReadyRef = useRef(false);
-  const [mode, setMode] = useState<"create" | "pay">("create");
+  
+  const [isMounted, setIsMounted] = useState(false);
+  const [invoiceTab, setInvoiceTab] = useState<"sales" | "purchases">("sales");
+
+  // --- ÉTATS DU FORMULAIRE ---
+  const [invoiceType, setInvoiceType] = useState<"paye" | "achat">("paye");
   const [clientName, setClientName] = useState("");
   const [ice, setIce] = useState("");
   const [address, setAddress] = useState("");
@@ -24,26 +36,18 @@ export function InvoiceScreen() {
   const [sendDirectEmail, setSendDirectEmail] = useState(true);
   const [markAsPaid, setMarkAsPaid] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [invoiceReference, setInvoiceReference] = useState("");
 
+  const [downloadingInvoiceId, setDownloadingInvoiceId] = useState<string | null>(null);
+
+  useEffect(() => { setIsMounted(true); }, []);
+
+  // Lecture / Sauvegarde LocalStorage
   useEffect(() => {
     try {
       const stored = window.localStorage.getItem("fintech.invoice-form");
       if (stored) {
-        const parsed = JSON.parse(stored) as {
-          mode?: "create" | "pay";
-          clientName?: string;
-          ice?: string;
-          address?: string;
-          invoiceObject?: string;
-          amountHT?: number;
-          vat?: number;
-          dueDateIso?: string | null;
-          sendDirectEmail?: boolean;
-          markAsPaid?: boolean;
-        };
-
-        setMode(parsed.mode ?? "create");
+        const parsed = JSON.parse(stored);
+        setInvoiceType(parsed.invoiceType ?? "paye");
         setClientName(parsed.clientName ?? "");
         setIce(parsed.ice ?? "");
         setAddress(parsed.address ?? "");
@@ -51,225 +55,346 @@ export function InvoiceScreen() {
         setAmountHT(parsed.amountHT ?? 15000);
         setVat(parsed.vat ?? 20);
         setDueDate(parsed.dueDateIso ? new Date(parsed.dueDateIso) : new Date());
-        setSendDirectEmail(parsed.sendDirectEmail ?? true);
-        setMarkAsPaid(parsed.markAsPaid ?? false);
       }
-    } catch {
-      // Ignore malformed storage values.
-    } finally {
-      storageReadyRef.current = true;
-    }
+    } catch { } finally { storageReadyRef.current = true; }
   }, []);
 
   useEffect(() => {
-    if (!storageReadyRef.current) return;
-
-    window.localStorage.setItem(
-      "fintech.invoice-form",
-      JSON.stringify({
-        mode,
-        clientName,
-        ice,
-        address,
-        invoiceObject,
-        amountHT,
-        vat,
-        dueDateIso: dueDate ? dueDate.toISOString() : null,
-        sendDirectEmail,
-        markAsPaid
-      })
-    );
-  }, [mode, clientName, ice, address, invoiceObject, amountHT, vat, dueDate, sendDirectEmail, markAsPaid]);
+    if (storageReadyRef.current) {
+      window.localStorage.setItem("fintech.invoice-form", JSON.stringify({
+        invoiceType, clientName, ice, address, invoiceObject, amountHT, vat,
+        dueDateIso: dueDate ? dueDate.toISOString() : null
+      }));
+    }
+  }, [invoiceType, clientName, ice, address, invoiceObject, amountHT, vat, dueDate]);
 
   const totalTTC = useMemo(() => amountHT + amountHT * (vat / 100), [amountHT, vat]);
 
-  const unpaidInvoices = useMemo(() => {
-    if (!profile) return [];
-    return profile.invoices.filter((inv) => inv.status !== "paid");
-  }, [profile]);
+  const salesInvoices = useMemo(() => profile?.invoices.filter(inv => (inv as any).type !== "achat") || [], [profile?.invoices]);
+  const purchaseInvoices = useMemo(() => profile?.invoices.filter(inv => (inv as any).type === "achat") || [], [profile?.invoices]);
+  const displayedInvoices = invoiceTab === "sales" ? salesInvoices : purchaseInvoices;
+
+  // --- CALCUL DES KPI ---
+  const { pendingInvoices, overdueInvoices, paidInvoices, totalPending, totalOverdue, totalPaid } = useMemo(() => {
+    const now = new Date();
+    
+    const pending = displayedInvoices.filter(i => i.status === "draft");
+    const overdue = pending.filter(i => new Date(i.dueDate) < now);
+    const paid = displayedInvoices.filter(i => i.status === "paid");
+
+    return {
+      pendingInvoices: pending,
+      overdueInvoices: overdue,
+      paidInvoices: paid,
+      totalPending: pending.reduce((sum, i) => sum + i.totalTTC, 0),
+      totalOverdue: overdue.reduce((sum, i) => sum + i.totalTTC, 0),
+      totalPaid: paid.reduce((sum, i) => sum + i.totalTTC, 0)
+    };
+  }, [displayedInvoices]);
+
+  // --- FONCTION DE GÉNÉRATION DE DOCUMENT RÉEL ---
+  const generateInvoiceFile = (inv: any) => {
+    const dateStr = new Date(inv.createdAt).toLocaleDateString('fr-FR');
+    const typeLabel = (inv as any).type === "achat" ? "FACTURE ACHAT" : "FACTURE VENTE";
+    
+    const htmlContent = `
+      <html>
+        <body style="font-family: sans-serif; padding: 40px; color: #333;">
+          <div style="display: flex; justify-content: space-between;">
+            <div>
+              <img src="${LOGO_URL}" alt="MyLegal" style="height: 50px; width: auto;" />              <p>Casablanca, Maroc</p>
+            </div>
+            <div style="text-align: right;">
+              <h2 style="margin: 0;">${typeLabel}</h2>
+              <p>Réf: ${inv.reference}</p>
+              <p>Date: ${dateStr}</p>
+            </div>
+          </div>
+          <hr style="margin: 40px 0; border: 1px solid #eee;" />
+          <div style="margin-bottom: 40px;">
+            <p><strong>Destinataire:</strong></p>
+            <p>${inv.clientName}</p>
+            <p>Objet: ${inv.invoiceObject}</p>
+          </div>
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr style="background: #F8FAFC;">
+                <th style="padding: 12px; text-align: left; border-bottom: 2px solid #eee;">Description</th>
+                <th style="padding: 12px; text-align: right; border-bottom: 2px solid #eee;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding: 12px; border-bottom: 1px solid #eee;">${inv.invoiceObject}</td>
+                <td style="padding: 12px; text-align: right; border-bottom: 1px solid #eee;">${inv.amountHT.toLocaleString()} ${profile?.currency}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div style="margin-left: auto; width: 250px; margin-top: 40px;">
+            <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+              <span>Total HT:</span> <span>${inv.amountHT.toLocaleString()} ${profile?.currency}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+              <span>TVA (${inv.vat}%):</span> <span>${(inv.totalTTC - inv.amountHT).toLocaleString()} ${profile?.currency}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 12px 0; border-top: 2px solid #333; font-weight: bold; font-size: 18px;">
+              <span>Total TTC:</span> <span>${inv.totalTTC.toLocaleString()} ${profile?.currency}</span>
+            </div>
+          </div>
+          <div style="margin-top: 100px; font-size: 10px; color: #999; text-align: center;">
+            Document généré par la plateforme MyLegal. Identifiant unique: ${inv.id}
+          </div>
+        </body>
+      </html>
+    `;
+
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${inv.reference}-${inv.clientName.replace(/\s+/g, '_')}.html`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   async function handleGenerateInvoice() {
     if (!clientName || !invoiceObject || !dueDate) return;
-
     try {
       setIsSubmitting(true);
-      await addInvoice({
-        clientName,
+      const newInvoice = {
+        type: invoiceType,
+        clientName, 
         invoiceObject,
         amountHT,
         vat,
-        dueDate: dueDate.toISOString()
+        dueDate: dueDate.toISOString(),
+      };
+      
+      await addInvoice(newInvoice);
+      
+      generateInvoiceFile({
+        ...newInvoice,
+        reference: `TEMP-${Date.now().toString().slice(-4)}`,
+        totalTTC,
+        createdAt: new Date().toISOString(),
+        id: crypto.randomUUID()
       });
 
-      // Clear form partially
-      setInvoiceObject("");
-      setMarkAsPaid(false);
-
-      // Redirect or show list
-      setActiveTab("home");
-    } catch (error) {
-      // Handled by store
-    } finally {
-      setIsSubmitting(false);
-    }
+      setClientName(""); setIce(""); setAddress(""); setInvoiceObject("");
+      setActiveTab("invoices");
+      showToast({ title: "Facture et Document créés", description: "Le fichier a été généré avec les données réelles.", variant: "success" });
+    } catch (error) { } finally { setIsSubmitting(false); }
   }
 
-  async function handleMarkInvoicePaid() {
-    if (!invoiceReference && unpaidInvoices.length === 0) return;
+  const handleDownloadPdf = (invoice: BankingInvoice) => {
+    if (downloadingInvoiceId) return; 
+    setDownloadingInvoiceId(invoice.id);
+    setTimeout(() => {
+      generateInvoiceFile(invoice);
+      showToast({ title: "Document prêt", description: `Le fichier de la facture ${invoice.reference} est disponible.`, variant: "success" });
+      setDownloadingInvoiceId(null);
+    }, 1000);
+  };
 
-    try {
-      setIsSubmitting(true);
-      // If we have a reference input, find by reference, or just use the first unpaid for demo
-      const invToPay = unpaidInvoices.find(i => i.reference === invoiceReference) || unpaidInvoices[0];
-      if (invToPay) {
-        await payInvoice(invToPay.id);
-      }
-      setInvoiceReference("");
-      setActiveTab("home");
-    } catch (error) {
-      // Handled by store
-    } finally {
-      setIsSubmitting(false);
-    }
+  if (!isMounted || !profile) return null;
+
+  // ==========================================
+  // VUE 1 : DASHBOARD DES FACTURES (LISTE)
+  // ==========================================
+  if (view === "list") {
+    return (
+      <section className="animate-floatIn space-y-5 pb-20 md:pb-6">
+        {/* HEADER RESPONSIVE */}
+        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white md:bg-transparent p-4 md:p-0 rounded-2xl md:rounded-none shadow-sm md:shadow-none border border-slate-100 md:border-none">
+          <div>
+            <h1 className="text-xl font-black text-slate-900 md:text-2xl">Factures</h1>
+            <p className="text-sm text-slate-500 mt-1">Gérez vos encaissements et vos paiements fournisseurs.</p>
+          </div>
+          <Button onClick={() => setActiveTab("invoices-create")} className="w-full sm:w-auto h-11 flex items-center gap-2 shadow-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white">
+            <Plus size={18} /> Nouvelle facture
+          </Button>
+        </header>
+
+        {/* TOGGLE VENTES / ACHATS */}
+        <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1.5 border border-slate-200">
+          <button 
+            onClick={() => setInvoiceTab("sales")} 
+            className={cn(
+              "rounded-lg px-3 py-2.5 text-sm font-bold transition-all uppercase tracking-wide", 
+              invoiceTab === "sales" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-900"
+            )}
+          >
+            À encaisser
+          </button>
+          <button 
+            onClick={() => setInvoiceTab("purchases")} 
+            className={cn(
+              "rounded-lg px-3 py-2.5 text-sm font-bold transition-all uppercase tracking-wide", 
+              invoiceTab === "purchases" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-900"
+            )}
+          >
+            À payer
+          </button>
+        </div>
+
+        {/* CARTES KPI RESPONSIVES */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Card className="p-5 bg-white border-slate-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+              {invoiceTab === "sales" ? "À encaisser" : "À payer"}
+            </p>
+            <p className="text-3xl font-black text-slate-900">
+              {totalPending.toLocaleString()} <span className="text-base font-bold text-slate-400">{profile.currency}</span>
+            </p>
+            <p className="text-[11px] text-slate-500 font-medium mt-1">{pendingInvoices.length} facture(s) en attente</p>
+          </Card>
+
+          <Card className="p-5 bg-white border-red-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+            <p className="text-[11px] font-bold text-red-500 uppercase tracking-wider mb-2">En retard</p>
+            <p className="text-3xl font-black text-red-600">
+              {totalOverdue.toLocaleString()} <span className="text-base font-bold opacity-70">{profile.currency}</span>
+            </p>
+            <p className="text-[11px] text-red-400 font-medium mt-1">{overdueInvoices.length} facture(s) dépassée(s)</p>
+          </Card>
+
+          <Card className="p-5 bg-white border-green-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow">
+            <p className="text-[11px] font-bold text-green-600 uppercase tracking-wider mb-2">
+              {invoiceTab === "sales" ? "Encaissé" : "Payé"}
+            </p>
+            <p className="text-3xl font-black text-green-700">
+              {totalPaid.toLocaleString()} <span className="text-base font-bold opacity-70">{profile.currency}</span>
+            </p>
+            <p className="text-[11px] text-green-500 font-medium mt-1">{paidInvoices.length} facture(s) terminée(s)</p>
+          </Card>
+        </div>
+
+        {/* LISTE DES FACTURES RESPONSIVE */}
+        <Card className="bg-white p-0 overflow-hidden border-slate-100 shadow-sm">
+          <div className="bg-slate-50/50 border-b border-slate-100 px-5 py-4 flex items-center justify-between">
+             <h2 className="text-sm font-bold text-slate-900">Toutes les factures ({displayedInvoices.length})</h2>
+          </div>
+          <ul className="divide-y divide-slate-100">
+            {displayedInvoices.length > 0 ? displayedInvoices.map((inv) => {
+              const isOverdue = inv.status === "draft" && new Date(inv.dueDate) < new Date();
+              
+              return (
+                <li key={inv.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 hover:bg-slate-50 transition-colors gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className={cn("h-11 w-11 flex items-center justify-center rounded-xl shrink-0 shadow-sm", inv.status === "paid" ? "bg-green-50 text-green-600" : isOverdue ? "bg-red-50 text-red-600" : "bg-indigo-50 text-indigo-600")}>
+                      <Receipt size={20}/>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <p className="text-sm font-bold text-slate-900 truncate max-w-[200px] sm:max-w-[250px]">{inv.clientName}</p>
+                        {isOverdue && <span className="px-2 py-0.5 rounded-md bg-red-100 text-red-700 text-[10px] font-bold uppercase tracking-wider">Retard</span>}
+                      </div>
+                      <p className="text-xs font-medium text-slate-500">{inv.reference} • Échéance : {new Date(inv.dueDate).toLocaleDateString('fr-FR')}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between sm:justify-end gap-4 border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-100 w-full sm:w-auto">
+                    <div className="flex flex-col items-start sm:items-end">
+                      <p className="text-sm font-black text-slate-900">{inv.totalTTC.toLocaleString()} <span className="text-[11px] text-slate-500">{profile.currency}</span></p>
+                      <p className={cn("text-[10px] font-bold uppercase tracking-wider mt-1", inv.status === "paid" ? "text-green-600" : "text-orange-500")}>
+                        {inv.status === "paid" ? "Payée" : "En attente"}
+                      </p>
+                    </div>
+                    <button 
+                      onClick={() => handleDownloadPdf(inv)} 
+                      className="h-10 w-10 flex items-center justify-center bg-white border border-slate-200 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 hover:border-indigo-100 rounded-xl transition-all shadow-sm"
+                    >
+                      {downloadingInvoiceId === inv.id ? <Loader2 className="animate-spin" size={18}/> : <Download size={18}/>}
+                    </button>
+                  </div>
+                </li>
+              );
+            }) : (
+              <li className="p-12 text-center">
+                <Receipt size={32} className="mx-auto text-slate-300 mb-3" />
+                <p className="text-sm font-medium text-slate-500">Aucune facture trouvée pour cette catégorie.</p>
+              </li>
+            )}
+          </ul>
+        </Card>
+      </section>
+    );
   }
 
+  // ==========================================
+  // VUE 2 : FORMULAIRE DE CRÉATION RESPONSIVE
+  // ==========================================
   return (
-    <section className="space-y-3 animate-floatIn md:space-y-4">
-      <header>
-        <h1 className="text-xl font-semibold leading-tight md:text-2xl">
-          {mode === "create" ? "Créer une facture" : "Payer une facture"}
-        </h1>
-        <p className="text-sm text-[#6B7280]">
-          {mode === "create" ? "Remplissez les détails pour générer un PDF conforme." : "Marquez une facture reçue comme payée."}
-        </p>
+    <section className="animate-slideInRight space-y-5 pb-20 md:pb-6">
+      <button 
+        onClick={() => setActiveTab("invoices")} 
+        className="flex items-center text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors mb-2"
+      >
+        <ArrowLeft size={16} className="mr-1.5" /> Retour
+      </button>
+
+      <header className="bg-white md:bg-transparent p-4 md:p-0 rounded-2xl md:rounded-none shadow-sm md:shadow-none border border-slate-100 md:border-none">
+        <h1 className="text-xl font-black text-slate-900 md:text-2xl">Générer une facture</h1>
+        <p className="text-sm text-slate-500 mt-1">Créez une facture {invoiceType === "paye" ? "de vente" : "d'achat"} en quelques clics.</p>
       </header>
 
-      <div className="grid grid-cols-2 gap-2 rounded-xl bg-[#F8FAFC] p-1.5">
-        <button
-          type="button"
-          onClick={() => setMode("create")}
-          className={mode === "create" ? "rounded-lg bg-white px-3 py-2 text-sm font-semibold text-[#3730A3] shadow-sm" : "rounded-lg px-3 py-2 text-sm font-medium text-[#6B7280]"}
-        >
-          Créer
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode("pay")}
-          className={mode === "pay" ? "rounded-lg bg-white px-3 py-2 text-sm font-semibold text-[#3730A3] shadow-sm" : "rounded-lg px-3 py-2 text-sm font-medium text-[#6B7280]"}
-        >
-          Payer
-        </button>
+      <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1.5 border border-slate-200">
+        <button onClick={() => setInvoiceType("paye")} className={cn("rounded-lg px-3 py-2.5 text-sm font-bold transition-all uppercase tracking-wide", invoiceType === "paye" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-900")}>Facture Client (Vente)</button>
+        <button onClick={() => setInvoiceType("achat")} className={cn("rounded-lg px-3 py-2.5 text-sm font-bold transition-all uppercase tracking-wide", invoiceType === "achat" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-900")}>Facture Fournisseur (Achat)</button>
       </div>
 
-      {mode === "create" ? (
-      <div className="grid gap-3 md:grid-cols-2">
-        <Card className="space-y-3 md:p-4">
-          <h2 className="text-sm font-semibold">Détails client</h2>
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="p-5 lg:p-6 bg-white border-slate-100 shadow-sm space-y-5">
           <div>
-            <Label htmlFor="clientName">Nom client</Label>
-            <Input id="clientName" placeholder="Société cliente" value={clientName} onChange={(e) => setClientName(e.target.value)} />
+            <Label className="text-xs font-bold uppercase text-slate-500 tracking-wider">Nom du tiers</Label>
+            <Input placeholder="Société ou Indépendant" value={clientName} onChange={(e) => setClientName(e.target.value)} className="mt-1.5 h-11 text-sm font-medium shadow-sm" />
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <Label htmlFor="ice">ICE / IF</Label>
-              <Input id="ice" placeholder="ICE123456789" value={ice} onChange={(e) => setIce(e.target.value)} />
-            </div>
-            <div>
-              <Label htmlFor="address">Adresse</Label>
-              <Input id="address" placeholder="Casablanca" value={address} onChange={(e) => setAddress(e.target.value)} />
+          <div>
+            <Label className="text-xs font-bold uppercase text-slate-500 tracking-wider">ICE (Optionnel)</Label>
+            <Input placeholder="00000000000000" value={ice} onChange={(e) => setIce(e.target.value)} className="mt-1.5 h-11 text-sm font-medium shadow-sm" />
+          </div>
+        </Card>
+
+        <Card className="p-5 lg:p-6 bg-white border-slate-100 shadow-sm space-y-5">
+          <div>
+            <Label className="text-xs font-bold uppercase text-slate-500 tracking-wider">Objet de la facture</Label>
+            <Input placeholder="Ex: Prestation de services" value={invoiceObject} onChange={(e) => setInvoiceObject(e.target.value)} className="mt-1.5 h-11 text-sm font-medium shadow-sm" />
+          </div>
+          <div>
+            <Label className="text-xs font-bold uppercase text-slate-500 tracking-wider">Date d'échéance</Label>
+            <div className="mt-1.5">
+               <CompactDatePicker value={dueDate} onChange={setDueDate} />
             </div>
           </div>
         </Card>
 
-        <Card className="space-y-3 md:p-4">
-          <h2 className="text-sm font-semibold">Détails facture</h2>
-          <div>
-            <Label htmlFor="object">Objet</Label>
-            <Input id="object" placeholder="Prestations juridiques" value={invoiceObject} onChange={(e) => setInvoiceObject(e.target.value)} />
+        <Card className="p-5 lg:p-6 bg-white border-slate-100 shadow-sm space-y-5">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label className="text-xs font-bold uppercase text-slate-500 tracking-wider">Montant HT</Label>
+              <Input type="number" value={amountHT} onChange={(e) => setAmountHT(Number(e.target.value))} className="mt-1.5 h-11 text-sm font-medium shadow-sm" />
+            </div>
+            <div>
+              <Label className="text-xs font-bold uppercase text-slate-500 tracking-wider">TVA</Label>
+              <div className="mt-1.5">
+                <CompactSelect value={`${vat}`} onChange={(v) => setVat(Number(v))} options={[{label:"20%", value:"20"}, {label:"10%", value:"10"}, {label:"0%", value:"0"}]} />
+              </div>
+            </div>
           </div>
-          <div>
-            <Label htmlFor="dueDate">Date d'échéance</Label>
-            <CompactDatePicker value={dueDate} onChange={setDueDate} />
+          
+          <div className="rounded-xl bg-indigo-50/50 p-4 border border-indigo-100 text-indigo-900 mt-2">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-indigo-600 mb-1">Total TTC calculé</p>
+            <p className="text-3xl font-black text-indigo-900">{totalTTC.toLocaleString()} <span className="text-lg font-bold opacity-70">{profile.currency}</span></p>
           </div>
         </Card>
 
-        <Card className="space-y-3 md:p-4">
-          <h2 className="text-sm font-semibold">Calcul facture</h2>
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <Label htmlFor="amountHT">Montant HT</Label>
-              <Input
-                id="amountHT"
-                type="number"
-                value={amountHT}
-                onChange={(e) => setAmountHT(Number(e.target.value) || 0)}
-              />
-            </div>
-            <div>
-              <Label htmlFor="vat">TVA</Label>
-              <CompactSelect
-                value={`${vat}`}
-                onChange={(value) => setVat(Number(value))}
-                options={[
-                  { label: "0%", value: "0" },
-                  { label: "10%", value: "10" },
-                  { label: "20%", value: "20" }
-                ]}
-              />
-            </div>
-          </div>
-          <div className="rounded-lg bg-[#EEF2FF] p-3">
-            <p className="text-xs text-[#4338CA]">Total TTC calculé automatiquement</p>
-            <p className="text-2xl font-semibold leading-tight text-[#312E81]">{totalTTC.toLocaleString("fr-MA")} {profile?.currency ?? "DHS"}</p>
-          </div>
-        </Card>
-
-        <Card className="space-y-3 md:p-4">
-          <div className="flex items-center justify-between rounded-lg bg-[#F8FAFC] p-2.5">
-            <span className="text-sm">Envoi direct par email</span>
-            <input type="checkbox" className="h-5 w-5 accent-[#4F46E5]" checked={sendDirectEmail} onChange={(e) => setSendDirectEmail(e.target.checked)} />
-          </div>
-          <div className="flex items-center justify-between rounded-lg bg-[#F8FAFC] p-2.5">
-            <span className="text-sm">Marquer comme payée</span>
-            <input type="checkbox" className="h-5 w-5 accent-[#4F46E5]" checked={markAsPaid} onChange={(e) => setMarkAsPaid(e.target.checked)} />
-          </div>
-
-          <Button fullWidth className="h-10.5" onClick={handleGenerateInvoice} disabled={isSubmitting}>
-            {isSubmitting ? "Génération..." : "Générer la facture PDF"}
+        <Card className="p-5 lg:p-6 bg-white border-slate-100 shadow-sm flex flex-col justify-end">
+          <Button fullWidth className="h-12 text-sm shadow-md font-bold bg-indigo-600 hover:bg-indigo-700 text-white" onClick={handleGenerateInvoice} disabled={isSubmitting || !clientName}>
+            {isSubmitting ? <Loader2 className="animate-spin mr-2" size={18}/> : <FileText className="mr-2" size={18}/>}
+            {isSubmitting ? "Génération en cours..." : "Générer et Télécharger PDF"}
           </Button>
         </Card>
       </div>
-      ) : (
-        <Card className="space-y-3 md:p-4">
-          <div>
-            <Label htmlFor="invoiceReference">Référence de la facture</Label>
-            <Input
-              id="invoiceReference"
-              placeholder="FAC-2026-001"
-              value={invoiceReference}
-              onChange={(e) => setInvoiceReference(e.target.value)}
-            />
-          </div>
-          {unpaidInvoices.length > 0 && (
-            <div className="mt-2 space-y-2">
-              <Label>Factures en attente</Label>
-              {unpaidInvoices.map(inv => (
-                <button
-                  key={inv.id}
-                  onClick={() => setInvoiceReference(inv.reference)}
-                  className="w-full text-left p-2 rounded-lg border border-border hover:bg-mylegal-pale/30 transition text-sm"
-                >
-                  <p className="font-semibold">{inv.reference} - {inv.clientName}</p>
-                  <p className="text-xs text-mylegal-steel">{inv.totalTTC.toLocaleString("fr-MA")} {profile?.currency}</p>
-                </button>
-              ))}
-            </div>
-          )}
-          <Button fullWidth className="h-10.5" onClick={handleMarkInvoicePaid} disabled={isSubmitting || (unpaidInvoices.length === 0 && !invoiceReference)}>
-            {isSubmitting ? "Traitement..." : "Marquer la facture comme payée"}
-          </Button>
-        </Card>
-      )}
     </section>
   );
 }
